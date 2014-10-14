@@ -240,6 +240,7 @@ body<=
     } else {
         # otherwise, it's a screened comment.
         my $commentu = $init ? $init->{comment}->{u} : undef;
+        my $parentu = $init ? $init->{parent}->{u} : undef;
         if ( $journalu && $journalu->is_community ) {
             if ( $POST{'usertype'} eq 'anonymous' ) {
                 $mlcode = 'success.screened.comm.anon2';
@@ -252,7 +253,11 @@ body<=
             if ( $POST{'usertype'} eq 'anonymous' ) {
                 $mlcode = '.success.screened.user.anon2';
             } elsif ( $commentu && $commentu->equals( $journalu ) ) {
-                $mlcode = '.success.screened.user.ownjournal2';
+                if ($parentu && !($parentu->equals( $commentu) ) {
+                    $mlcode = '.success.screened.user.ownjournal.otherparent'
+                } else {     #no parent comment or replying to own comment
+                    $mlcode = '.success.screened.user.ownjournal2';
+                }
             } else {
                 $mlcode = '.success.screened.user2';
             }

@@ -78,19 +78,19 @@
 .preview.entry.journal=[[user]] posting in [[journal]]
 
 .preview.poster=<strong>Posted by: </strong>
-.preview.anonymous=Anonymous
+	.preview.anonymous=Anonymous
 .preview.unauthenticated_openid=[[openid]] (not yet authenticated)
-.preview.subject=<strong>Subject: </strong>
+	.preview.subject=<strong>Subject: </strong>
 
-.preview.submit=Submit
+	.preview.submit=Submit
 
-.preview.title=Preview
+	.preview.title=Preview
 
-.success.loggedin=You're now logged in.
+	.success.loggedin=You're now logged in.
 
-.success.message2=Your comment has been added. You can <a [[aopts]]>view it</a>.
+	.success.message2=Your comment has been added. You can <a [[aopts]]>view it</a>.
 
-.success.screened.comm.anon2=Your anonymous comment has been added and marked as screened; it will be visible only to the community administrators until they choose to unscreen it. <a [[aopts]]>Go back to the comment thread</a>.
+	.success.screened.comm.anon2=Your anonymous comment has been added and marked as screened; it will be visible only to the community administrators until they choose to unscreen it. <a [[aopts]]>Go back to the comment thread</a>.
 
 .success.screened.comm.owncomm3=Your comment has been added. According to this community or entry's settings, it was marked as screened, and will be visible only to you and any other community admins until one of you chooses to unscreen it. <a [[aopts]]>View your comment</a>.
 
@@ -101,6 +101,8 @@
 .success.screened.user.ownjournal2=Your comment has been added. According to this journal's settings, it was marked as screened, and will be visible only to you until you choose to unscreen it. <a [[aopts]]>View your comment</a>.
 
 .success.screened.user2=Your comment has been added. According to this account's settings, it was marked as screened and will be visible only to you and the journal's owner until the owner chooses to unscreen it. <a [[aopts]]>View your comment</a>.
+
+.success.screened.user.ownjournal.otherparent=Your comment has been added. According to this journal's settings, it was marked as screened and will be visible only to you and the author of the comment you replied to until you choose to unscreen it. <a [[aopts]]>View your comment.</a>
 
 .success.title=Success
 
