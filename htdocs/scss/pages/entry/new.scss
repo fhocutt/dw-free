@@ -1,0 +1,341 @@
+@import "foundation/base", "foundation/components/grid", "foundation/components/type", "foundation/components/forms";
+
+.entry-quick-actions .secondary-actions {
+    text-align: left;
+}
+
+@media #{$medium-up} {
+    .components {
+        padding: 0 .45rem;
+    }
+
+    .second-column, .third-column {
+        float: left;
+        width: grid-calc(6, 12);
+    }
+
+    .entry-quick-actions .secondary-actions {
+        text-align: right;
+    }
+}
+
+@media #{$large-up} {
+    .entry-full-width {
+        .first-column, .second-column, .third-column {
+            float: left;
+            width: grid-calc(4, 12);
+        }
+    }
+
+    .entry-partial-width {
+        .current-entry {
+            float: left;
+            margin-right: $column-gutter / 2;
+            width: grid-calc(8, 12);
+
+            & > .columns {
+                padding-right: 0;
+            }
+        }
+
+        .first-column {
+            float: left;
+            width: grid-calc(4, 12);
+        }
+        .second-column, .third-column {
+            float: left;
+            width: grid-calc(6, 12);
+        }
+    }
+}
+
+.js .js-only.components {
+    display: none;
+}
+
+.community-administration {
+    clear: both;
+
+    h2 {
+        font-size: 1.2rem;
+    }
+}
+
+// don't let fancy-select-box expand around its contents (causes extra whitespace)
+.entry-quick-actions {
+    $entry-quick-action-height: ($input-font-size + ($form-spacing * 1.5) - rem-calc(1));
+    ul {
+        margin-bottom: 0;
+    }
+
+    li {
+        display: inline-block;
+
+        input, .button {
+            border-radius: 0;
+        }
+
+        &:first-of-type input {
+            border-top-left-radius: $global-radius;
+            border-bottom-left-radius: $global-radius;
+        }
+        &:last-of-type input, &:last-of-type .button {
+            border-top-right-radius: $global-radius;
+            border-bottom-right-radius: $global-radius;
+        }
+    }
+    label {
+        @include element-invisible();
+    }
+    input[type=text] {
+        display: inline-block;
+
+        // force alignment to buttons
+        padding-top: $button-med - rem-calc(1);
+        position: relative;
+        top: 2px;
+        border-radius: 0;
+    }
+    .usejournal-text {
+        padding-left: 0.2rem;
+        display: inline-block;
+        vertical-align: top;
+    }
+
+    li + li {
+        input, button, .fancy-select-output {
+            margin-left: -1px;
+        }
+    }
+
+    select {
+        position: relative;
+        top: -2px;
+    }
+
+    input, .fancy-select-output, select, button, .usejournal-text {
+        height: $entry-quick-action-height;
+    }
+
+    @media #{$small-only} {
+        .entry-quick-metadata li:last-of-type {
+            width: 100%;
+
+            .fancy-select {
+                width: 100%;
+                padding-right: $column-gutter;
+            }
+            .fancy-select-output {
+                border-radius: $global-radius;
+            }
+        }
+    }
+
+    @media #{$medium-up} {
+        .fancy-select-output {
+            width: auto;
+        }
+    }
+}
+
+.current-entry {
+    textarea {
+        font-family: monospace;
+    }
+}
+
+.inactive-component {
+    display: none;
+}
+
+.component {
+    padding: 0;
+    font-size: .8rem;
+
+    h3 {
+        font-size: 1rem;
+    }
+
+    p, label, input, legend, ul, select, textarea {
+        font-size: .8rem;
+    }
+
+    input[type=text], input[type=password], select {
+        height: 2rem;
+        padding: .4rem;
+    }
+
+    .postfix {
+        height: 2rem;
+        line-height: 2rem;
+    }
+
+    &.collapse-collapsed {
+        h3 {
+           margin-bottom: 0;
+           @include single-transition(margin-bottom);
+        }
+    }
+
+    &.collapse-expanded {
+        // .last-visible handles the case when we have invisible elements
+        // that are only meant to be revealed by js
+        .row:last-child .columns >, .last-visible {
+            label input, input, select, button {
+                margin-bottom: 0;
+            }
+        }
+    }
+
+    ul {
+      list-style-type:none;
+      margin: 0;
+      padding: 0;
+    }
+
+    fieldset {
+        padding: .75rem;
+    }
+
+    fieldset fieldset {
+        padding: 0;
+        margin: 0;
+    }
+
+    a {
+        text-decoration: none;
+    }
+}
+
+.component, .reveal-modal {
+    // so that when it wraps it still stays beside the radio/checkbox
+    // instead of having the entire label go to the next line
+    input[type="checkbox"] + label,
+    input[type="radio"] + label {
+        display: inline;
+    }
+}
+
+/* Currents */
+.moodpreview {
+    text-align: center;
+
+    .moodpreview-image {
+        height: auto !important; // avoid distortion if we constrained image width
+    }
+}
+
+/* Access */
+.custom-groups ul {
+    -moz-column-width: 12em;
+    -webkit-column-width: 12em;
+    column-width: 12em;
+}
+
+/* Icons */
+
+.icons-component {
+    .icon {
+        text-align: center;
+        margin-bottom: $paragraph-margin-bottom;
+    }
+
+    .inner button {
+        width: 100%;
+    }
+
+    .no-icon {
+        position: relative;
+        width: 100px;
+        height: 100px;
+        margin: 0 auto;
+
+        a {
+            display: block;
+            height: 50%;
+            position: absolute;
+            overflow: auto;
+            margin: auto;
+            top: 0; left: 0; bottom: 0; right: 0;
+        }
+    }
+}
+
+/* Slug */
+.slug-base {
+    word-break: break-all;
+}
+
+/* Date */
+
+.displaydate-component {
+    .picker-output {
+        margin-top: -1 * rem-calc(20); // $form-spacing + 2px for borders
+    }
+    .picker--time {
+        // column-gutter: 15
+        // component padding: 20
+        right: rem-calc(15+20);
+    }
+
+    .columns:nth-child(2) .postfix {
+        border-radius: 0;
+    }
+
+    .columns:nth-child(3) input {
+        border-left: none;
+    }
+}
+
+/* elements in modals */
+// remove extra padding here since the modal has its own padding
+.reveal-modal fieldset, .reveal-modal fieldset .columns {
+    padding: 0;
+}
+
+.reveal-modal fieldset {
+    border: none;
+}
+
+
+/* toolbar (temp) */
+@-moz-keyframes rotate { 100% { -moz-transform: rotate(90deg); } }
+@-webkit-keyframes rotate { 100% { -webkit-transform: rotate(90deg); } }
+@keyframes rotate { 100% { transform: rotate(90deg); } }
+.toolbar-container {
+    .panel {
+        margin-bottom: 0;
+        border-bottom: 0;
+    }
+}
+
+#js-settings-panel {
+    display: none;
+
+    fieldset {
+        margin: 0;
+        padding: 0;
+    }
+
+    .row:last-child input {
+        margin-bottom: 0;
+    }
+}
+
+.toolbar {
+    padding-bottom: 0.2em;
+    padding-top: 0.2em;
+    border-bottom: none;
+
+    a {
+        text-decoration: none;
+
+        &.spinner {
+            .fi-icon {
+                -webkit-animation:rotate 2s linear infinite;
+                 -moz-animation:rotate 2s linear infinite;
+                 animation:rotate 2s linear infinite;
+            }
+        }
+    }
+}

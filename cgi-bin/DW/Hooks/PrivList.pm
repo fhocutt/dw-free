@@ -10,7 +10,7 @@
 # Authors:
 #      Jen Griffin <kareila@livejournal.com>
 #
-# Copyright (c) 2011 by Dreamwidth Studios, LLC.
+# Copyright (c) 2011-2014 by Dreamwidth Studios, LLC.
 #
 # This program is free software; you may redistribute it and/or modify it under
 # the same terms as Perl itself. For a copy of the license, please reference
@@ -99,8 +99,8 @@ LJ::Hooks::register_hook( 'privlist-add', sub {
                           entry_action email_changed expunge_userpic
                           impersonate journal_status logout_user
                           mass_privacy paid_from_invite paidstatus
-                          privadd privdel reset_email reset_password
-                          s2lid_remap set_badpassword shop_points
+                          privadd privdel rename_token reset_email
+                          reset_password s2lid_remap set_badpassword shop_points
                           suspend sysban_add sysban_mod synd_create
                           synd_edit synd_merge sysban_add sysban_modify
                           sysban_trig unsuspend vgifts viewall /;
@@ -120,14 +120,17 @@ LJ::Hooks::register_hook( 'privlist-add', sub {
         mysqlstatus    => "Access to /admin/mysql_status",
         propedit       => "Allow to change userprops for other users",
         rename         => "Access to rename_opts console command",
+        sendmail       => "Access to /admin/sendmail",
         spamreports    => "Access to /admin/spamreports",
         styleview      => "Access to private styles on /customize/advanced",
+        support        => "Access to /admin/supportcat",
         themes         => "Access to /admin/themes",
         theschwartz    => "Access to /admin/theschwartz",
         usernames      => "Bypasses is_protected_username check",
         userpics       => "Access to expunge_userpic console command",
         users          => "Access to change_journal_status console command",
         vgifts         => "Access to approval functions on /admin/vgifts",
+        oauth          => "Modify some settings on OAuth consumers",
     } if $priv eq 'siteadmin';
 
     $hr = {
@@ -136,24 +139,25 @@ LJ::Hooks::register_hook( 'privlist-add', sub {
 
     # extracted from LJ::Sysban::validate
     $hr = {
-        email         => "Can ban specific email addresses",
-        email_domain  => "Can ban entire email domains",
-        invite_email  => "Can ban invites for email addresses",
-        invite_user   => "Can ban invites for users",
-        ip            => "Can ban connections from specific IPs",
-        lostpassword  => "Can ban requests for lost passwords",
-        noanon_ip     => "Can ban anonymous comments from specific IPs",
-        pay_cc        => "Can ban payments from specific credit cards",
-        pay_email     => "Can ban payments from specific emails",
-        pay_uniq      => "Can ban payments from specific sessions",
-        pay_user      => "Can ban payments from specific users",
-        spamreport    => "Can ban spam reports from specific users",
-        support_email => "Can ban support requests from emails",
-        support_uniq  => "Can ban support requests from sessions",
-        support_user  => "Can ban support requests from users",
-        talk_ip_test  => "Can force IPs to complete CAPTCHA to leave comments",
-        uniq          => "Can ban specific browser sessions",
-        user          => "Can ban specific users",
+        email           => "Can ban specific email addresses",
+        email_domain    => "Can ban entire email domains",
+        invite_email    => "Can ban invites for email addresses",
+        invite_user     => "Can ban invites for users",
+        ip              => "Can ban connections from specific IPs",
+        lostpassword    => "Can ban requests for lost passwords",
+        noanon_ip       => "Can ban anonymous comments from specific IPs",
+        oauth_consumer  => "Can ban specific users from having OAuth consumers",
+        pay_cc          => "Can ban payments from specific credit cards",
+        pay_email       => "Can ban payments from specific emails",
+        pay_uniq        => "Can ban payments from specific sessions",
+        pay_user        => "Can ban payments from specific users",
+        spamreport      => "Can ban spam reports from specific users",
+        support_email   => "Can ban support requests from emails",
+        support_uniq    => "Can ban support requests from sessions",
+        support_user    => "Can ban support requests from users",
+        talk_ip_test    => "Can force IPs to complete CAPTCHA to leave comments",
+        uniq            => "Can ban specific browser sessions",
+        user            => "Can ban specific users",
     } if $priv eq 'sysban';
 
     return $hr;

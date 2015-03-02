@@ -9,7 +9,7 @@
 #      Mark Smith <mark@dreamwidth.org>
 #      Andrea Nall <anall@andreanall.com>
 #
-# Copyright (c) 2008-2010 by Dreamwidth Studios, LLC.
+# Copyright (c) 2008-2013 by Dreamwidth Studios, LLC.
 #
 # This program is free software; you may redistribute it and/or modify it under
 # the same terms as Perl itself.  For a copy of the license, please reference
@@ -147,9 +147,17 @@ Return the (normalized) value of the Host header.
 
 Sets or gets an request header.
 
+=head2 C<< $r->headers_in >>
+
+Returns all request headers.
+
 =head2 C<< $r->header_out( $header[, $value] ) >>
 
 Sets or gets an response header.
+
+=head2 C<< $r->headers_out >>
+
+Returns all response headers.
 
 =head2 C<< $r->header_out_add( $header, $value ) >>
 
@@ -233,6 +241,10 @@ Spawn off an external program.
 
 Redirect to a different URL.
 
+=head2 C<< $r->no_cache >>
+
+Turn off caching for this resource.
+
 =head1 AUTHORS
 
 =over
@@ -245,7 +257,7 @@ Redirect to a different URL.
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (c) 2008-2010 by Dreamwidth Studios, LLC.
+Copyright (c) 2008-2013 by Dreamwidth Studios, LLC.
 
 This program is free software; you may redistribute it and/or modify it under
 the same terms as Perl itself. For a copy of the license, please reference

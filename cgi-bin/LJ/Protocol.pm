@@ -177,6 +177,8 @@ sub do_request
     $apache_r->notes->{codepath} = "protocol.$method"
         if $apache_r && ! $apache_r->notes->{codepath};
 
+    DW::Stats::increment( 'dw.protocol_request', 1, [ "method:$method" ] );
+
     if ($method eq "login")            { return login(@args);            }
     if ($method eq "getfriendgroups")  { return getfriendgroups(@args);  }
     if ($method eq "gettrustgroups")   { return gettrustgroups(@args);   }
@@ -1319,14 +1321,6 @@ sub postevent
         $uowner->preload_props( @owner_props );
     }
 
-    # are they trying to post back in time?
-    if ($posterid == $ownerid && !$u->is_syndicated &&
-        !$time_was_faked && $u->{'newesteventtime'} &&
-        $eventtime lt $u->{'newesteventtime'} &&
-        !$req->{'props'}->{'opt_backdated'}) {
-        return fail($err, 153, "You have an entry which was posted at $u->{'newesteventtime'}, but you're trying to post an entry before this. Please check the date and time of both entries. If the other entry is set in the future on purpose, edit that entry to use the \"Don't show on Reading Pages\" option. Otherwise, use the \"Don't show on Reading Pages\" option for this entry instead.");
-    }
-
     my $qallowmask = $req->{'allowmask'}+0;
     my $security = "public";
     my $uselogsec = 0;
@@ -1725,6 +1719,9 @@ sub postevent
     LJ::mark_user_active($u, 'post');
     LJ::mark_user_active($uowner, 'post') unless $u->equals( $uowner );
 
+    DW::Stats::increment( 'dw.action.entry.post', 1,
+            [ 'journal_type:' . $uowner->journaltype_readable ] );
+
     $res->{'itemid'} = $jitemid;  # by request of mart
     $res->{'anum'} = $anum;
     $res->{'url'} = $entry->url;
@@ -1734,9 +1731,6 @@ sub postevent
     unless ( $flags->{nonotify} ) {
         push @jobs, LJ::Event::JournalNewEntry->new($entry)->fire_job;
         push @jobs, LJ::Event::OfficialPost->new($entry)->fire_job if $uowner->is_official;
-
-        # PubSubHubbub Support
-        LJ::Feed::generate_hubbub_jobs( $uowner, \@jobs ) unless $uowner->is_syndicated;
 
         # latest posts feed update
         DW::LatestFeed->new_item( $entry );
@@ -2151,12 +2145,6 @@ sub editevent
 
     $uowner->clear_daycounts( $oldevent->{allowmask} + 0 || $oldevent->{security}, $qallowmask || $security );
 
-    $res->{itemid} = $itemid;
-    if (defined $oldevent->{'anum'}) {
-        $res->{'anum'} = $oldevent->{'anum'};
-        $res->{'url'} = LJ::item_link($uowner, $itemid, $oldevent->{'anum'});
-    }
-
     # Update the slug (try to, this will fail if this slug is already used). To
     # delete or change the slug, you must pass this parameter in. If it is not
     # present, we leave the slug alone.
@@ -2177,7 +2165,17 @@ sub editevent
     }
 
     my $entry = LJ::Entry->new($ownerid, jitemid => $itemid);
+
+    $res->{itemid} = $itemid;
+    if (defined $oldevent->{'anum'}) {
+        $res->{'anum'} = $oldevent->{'anum'};
+        $res->{'url'} = $entry->url;
+    }
+
     LJ::EventLogRecord::EditEntry->new($entry)->fire;
+
+    DW::Stats::increment( 'dw.action.entry.edit', 1,
+            [ 'journal_type:' . $uowner->journaltype_readable ] );
 
     # fired to copy the post over to the Sphinx search database
     if ( @LJ::SPHINX_SEARCHD && ( my $sclient = LJ::theschwartz() ) ) {
@@ -2188,10 +2186,7 @@ sub editevent
         );
     }
 
-    # PubSubHubbub Support
     my @jobs;
-    LJ::Feed::generate_hubbub_jobs( $uowner, \@jobs ) unless $uowner->is_syndicated;
-
     LJ::Hooks::run_hooks( "editpost", $entry, \@jobs );
 
     my $sclient = LJ::theschwartz();

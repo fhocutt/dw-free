@@ -48,6 +48,7 @@ set module_navlinks_section = "header";
 
 function Page::print() {
     """<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">\n<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">\n<head profile="http://www.w3.org/2006/03/hcard http://purl.org/uF/hAtom/0.1/ http://gmpg.org/xfn/11">\n""";
+    $this->print_meta_tags();
     $this->print_head();
     $this->print_stylesheets();
     $this->print_head_title();
@@ -62,9 +63,7 @@ function Page::print() {
                     """;
                     $this->print_module_section("header");
                     """<div id="journaltitles-container">""";
-                    $this->print_global_title();
-                    $this->print_global_subtitle();
-                    $this->print_title();
+                    $this->print_header();
                     """</div>""";
     """
                 </div><!-- end header>inner -->
@@ -126,6 +125,7 @@ function Page::print() {
 }
 
 function print_stylesheet () {
+    var string medium_media_query = generate_medium_media_query();
 
     var string primary_colors = generate_color_css( $*color_entry_text, $*color_entry_background, $*color_entry_border );
     var string header_colors = generate_color_css( new Color, $*color_header_background, $*color_page_border );
@@ -135,6 +135,7 @@ function print_stylesheet () {
 
     var string entry_colors = generate_color_css( new Color, $*color_entry_title_background, $*color_entry_border );
     var string entry_title_colors = generate_color_css( $*color_entry_title, new Color, new Color );
+    var string comment_colors = generate_color_css( $*color_entry_text, $*color_entry_background, new Color );
     var string comment_header_colors = generate_color_css( $*color_page_title, $*color_header_background, $*color_entry_border );
     var string comment_title_colors = generate_color_css( $*color_page_title, new Color, new Color );
 
@@ -240,25 +241,33 @@ body {
 #primary a { $link_colors }
 #primary a:visited { $link_colors_visited }
 
-.one-column #primary { 
+#primary {
     width: 96%;
     margin-right: -98%;
     margin-left: 2%;
 }
-.two-columns-left #primary,
-.two-columns-right #primary,
-.three-columns-left #primary,
-.three-columns-right #primary { 
-    margin-right: -98%;
-    width: 98%;
-    }
-.two-columns-right #primary,
-.three-columns-right #primary { 
-    margin-left: 2%;
+@media $medium_media_query {
+    .multiple-columns #primary {
+        width: 98%;
+        }
+
+    .column-left #primary {
+        margin-left: 0;
     }
 
-.two-columns-left .navigation,
-.three-columns-left .navigation { text-align: right; }
+    .column-right #primary {
+        margin-left: 2%;
+        }
+
+    .three-columns-sides #primary {
+        width:100%;
+        margin-right:-100%;
+        margin-left: 0;
+        }
+
+    .two-columns-left .navigation,
+    .three-columns-left .navigation { text-align: right; }
+}
 
 /* entries */
 .entry li { margin-left: 1em; }
@@ -307,9 +316,12 @@ ul.entry-interaction-links { text-align: right;
     min-height: 17px; } /* prevent entry-management icons from shoving quickreply aside */
 
 /* comments */
-.comment { margin-bottom: 1em; }
+.page-entry #primary > .inner:first-child { padding: 1em 0; }
+.page-entry .entry-wrapper { padding: 0 1em; }
+.partial .comment { margin-bottom: 0; padding: 0 .5em; }
+.comment > .inner:first-child { padding: 1em; }
 
-.partial .comment { margin-bottom: 0;} 
+.comment { margin-bottom: 1em; $comment_colors }
 
 .comment .header { $comment_header_colors
     padding: 2px 5px;
@@ -454,17 +466,24 @@ text-align: center; }
     padding: 0 .5em !important;
 }
 
-.three-columns-right #secondary > .inner:first-child {
-    padding: 0 0 0 .5em !important;
-}
-.three-columns-right #tertiary > .inner:first-child {
-    padding: 0 !important;
-}
-.three-columns-left #secondary > .inner:first-child {
-    padding: 0 !important;
-}
-.three-columns-left #tertiary > .inner:first-child {
-    padding: 0 .5em 0 0 !important;
+@media $medium_media_query {
+    .three-columns-right #secondary > .inner:first-child {
+        padding: 0 0 0 .5em !important;
+    }
+    .three-columns-right #tertiary > .inner:first-child {
+        padding: 0 !important;
+    }
+    .three-columns-left #secondary > .inner:first-child {
+        padding: 0 !important;
+    }
+    .three-columns-left #tertiary > .inner:first-child {
+        padding: 0 .5em 0 0 !important;
+    }
+
+    .two-columns #secondary .module-search .search-form,
+    .three-columns .module-search .search-form {
+        text-align: right;
+        }
 }
 
 .module {  padding: 3px; 
@@ -492,11 +511,6 @@ $navlinks_css
     background: $*color_entry_background, !important;
     font-size: .9em !important;
     color: $*color_entry_text !important; }
-
-.two-columns #secondary .module-search .search-form,
-.three-columns .module-search .search-form {
-    text-align: right;
-    }
 
 $userpic_css
     """;

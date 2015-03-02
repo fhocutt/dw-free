@@ -194,16 +194,32 @@ sub _call_hash {
     return $r->NOT_FOUND unless $opts->format_valid;
 
     # prefer SSL if wanted and possible
-    #  cannot do SSL on userspace, cannot do SSL if it's not set up
+    #  cannot do SSL if it's not set up
     #  cannot do the redirect safely for non-GET/HEAD requests.
+    my $url = LJ::create_url( $r->uri, keep_args => 1, ssl => 1 );
     return $r->redirect( LJ::create_url( $r->uri, keep_args => 1, ssl => 1 ) )
-        if $opts->prefer_ssl && $LJ::USE_SSL && $opts->role eq 'app' &&
+        if $opts->prefer_ssl && $LJ::USE_SSL &&
             ! $opts->ssl && ( $r->method eq 'GET' || $r->method eq 'HEAD' );
+
+    # if renamed with redirect in place, then do the redirect
+    if ( $opts->role eq 'user' && ( my $orig_u = LJ::load_user( $opts->username ) ) ) {
+        my $renamed_u = $orig_u->get_renamed_user;
+
+        unless ( $renamed_u && $orig_u->equals( $renamed_u ) ) {
+            my $journal_host = $renamed_u->journal_base;
+            $journal_host =~ s!https?://!!;
+
+            return $r->redirect( LJ::create_url( $r->uri, host => $journal_host, keep_args => 1 ) );
+        }
+    }
 
     # apply default content type if it exists
     my $format = $opts->format;
     $r->content_type( $default_content_types->{$format} )
         if $default_content_types->{$format};
+
+    # apply no-cache if needed
+    $r->no_cache if $opts->no_cache;
 
     # try to call the handler that actually does the content creation; it will
     # return either a number (HTTP code), or undef
@@ -304,10 +320,16 @@ sub _redirect_helper {
     my $r = DW::Request->get;
     my $data = $_[0]->args;
 
+    my $dest = $data->{dest};
+    if ( ref $dest eq "CODE" ) {
+        my $get = $r->get_args;
+        $dest = $dest->( { map { $_ => LJ::eurl( $get->{$_} ) } keys %$get } );
+    }
+
     if ( $data->{full_uri} ) {
-        return $r->redirect( $data->{dest} );
+        return $r->redirect( $dest );
     } else {
-        return $r->redirect( LJ::create_url( $data->{dest}, keep_args => $data->{keep_args} ) );
+        return $r->redirect( LJ::create_url( $dest, keep_args => $data->{keep_args} ) );
     }
 }
 
@@ -477,7 +499,7 @@ sub register_rpc {
 
     # FIXME: per Bug 4900, this line is temporary and can go away as soon as
     #  all the javascript is updated
-    $class->register_regex( qr!^/[^/]+/\Q__rpc_$string\E$!, $sub, user => 1, %opts );
+    $class->register_regex( qr!^/[^/]+/\Q__rpc_$string\E$!, $sub, app => 1, user => 1, %opts );
 }
 
 =head2 C<< $class->register_api_endpoint( $string, $sub, %opts ) >>
@@ -583,16 +605,14 @@ sub _apply_defaults {
     $hash->{user}         = $opts->{user} || 0;
     $hash->{api}          = $opts->{api}  || 0;
     $hash->{format}     ||= $opts->{format} || 'html';
-    $hash->{prefer_ssl}   = $opts->{prefer_ssl} || 0;
+    $hash->{prefer_ssl}   = $opts->{prefer_ssl} // $LJ::USE_HTTPS_EVERYWHERE;
+    $hash->{no_cache}     = $opts->{no_cache} || 0;
 
     my $formats = $opts->{formats} || [ $hash->{format} ];
     $formats = { map { ( $_, 1 ) } @$formats } if ref $formats eq 'ARRAY';
 
     $hash->{formats} = $formats;
     $hash->{methods} = $opts->{methods} || { GET => 1, POST => 1, HEAD => 1 };
-
-    croak 'Cannot register with prefer_ssl without app role'
-        if $hash->{prefer_ssl} && ! $hash->{app};
 
     return $hash;
 }

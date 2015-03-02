@@ -16,6 +16,8 @@ propgroup presentation {
     property use num_items_reading;
     property use use_custom_friend_colors;
     property use use_shared_pic;
+    property use medium_breakpoint_width;
+    property use large_breakpoint_width;
     property use use_journalstyle_entry_page;
     property use custom_control_strip_colors;
 
@@ -281,6 +283,7 @@ function print_module_navlinks() {
 function Page::print()
 {
     """<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">\n<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">\n<head profile="http://www.w3.org/2006/03/hcard http://purl.org/uF/hAtom/0.1/ http://gmpg.org/xfn/11">\n""";
+    $this->print_meta_tags();
     $this->print_head();
     $this->print_stylesheets();
     $this->print_head_title();
@@ -293,9 +296,7 @@ function Page::print()
             <div id="header">
                 <div class="inner">
                     """;
-                    $this->print_global_title();
-                    $this->print_global_subtitle();
-                    $this->print_title();
+                    $this->print_header();
                     $this->print_module_section("header");
     """
                 </div><!-- end header>inner -->
@@ -333,6 +334,8 @@ function Page::print()
 
 function Page::print_default_stylesheet()
 {
+var string medium_media_query = generate_medium_media_query();
+var string large_media_query = generate_large_media_query();
 
 var string sidebar_position = "";
 var string sidebar_position_opposite = "";
@@ -459,33 +462,34 @@ body {$page_font $page_background color: $*color_page_text; width: 100%; margin:
 
 #secondary > .inner:first-child {padding: 0;}
 
-.one-column #secondary {display: none;}
-.one-column #primary {border: 0.083em solid $*color_page_border; background: $*color_entry_background; width: 90%; padding: 0; border-top: 0; position: absolute; margin-left: 5%; }
-.one-column #header { width: 90%;}
+#primary {border: 0.083em solid $*color_page_border; background: $*color_entry_background; padding: 0; border-top: 0; }
+#header, #primary, #secondary { width: 90%; margin-left: 5%; }
 
-.two-columns #secondary {
-    background: $*color_entry_background;
-    border: .083em solid $*color_page_border;
-    border-bottom: 0;
-    margin-$sidebar_position: auto;
-    margin-$sidebar_position_opposite: 66.4%;
-    width: 16.667em;
-    }
+@media $medium_media_query {
+    .two-columns #secondary {
+        background: $*color_entry_background;
+        border: .083em solid $*color_page_border;
+        border-bottom: 0;
+        margin-$sidebar_position: auto;
+        margin-$sidebar_position_opposite: 66.4%;
+        width: 16.667em;
+        }
 
-.two-columns #primary {
-    background: $*color_entry_background;
-    border: .083em solid $*color_page_border;
-    border-top: 0;
-    margin-$sidebar_position_opposite: 5%;
-    padding: 0;
-    position: absolute;
-    width: 60.4%;
-    $sidebar_position_opposite: 0;
-    }
+    .two-columns #primary {
+        background: $*color_entry_background;
+        border: .083em solid $*color_page_border;
+        border-top: 0;
+        margin-$sidebar_position_opposite: 5%;
+        padding: 0;
+        position: absolute;
+        width: 60.4%;
+        $sidebar_position_opposite: 0;
+        }
 
-.two-columns #header {
-    width: 60.4%;
-    }
+    .two-columns #header {
+        width: 60.4%;
+        }
+}
 
 /* ====================== RANDOM MARK UP AND CONDITIONALS ======================= */
 
@@ -540,20 +544,44 @@ ul ul {list-style: circle;}
 .entry-content a img:hover {border-color: $*color_entry_link_hover; }
 .entry-content .userpic, #comments .userpic {background: $*color_entry_background;}
 
+/* ensure comment content stretches out horizontally so it's readable */
+.comment-content:before {
+    content: "";
+    display: block;
+    overflow: hidden;
+    width: 10em;
+}
+.comment-content { border-top: 1px transparent solid; } /* for firefox */
+
+/* To constrain the width and prevent layout breaking */
+.entry-content img, .comment-content img {
+    max-width: 100%;
+    height: auto;
+}
+
+@media $large_media_query {
+    .entry-content img, .comment-content img { max-width: none; }
+}
+
 /* ====================== HEADER ======================= */
 
 #header {
     border: .083em solid $*color_page_border;
     border-bottom: none;
-    margin: 0 -100% 0 5%;
     padding: 0;
     $header_background
     $header_background_height
     }
 
-.two-columns-left #header {
-    margin: 0 5% 0 auto;
+@media $medium_media_query {
+    .two-columns-right #header {
+        margin: 0 -100% 0 5%;
     }
+
+    .two-columns-left #header {
+        margin: 0 5% 0 auto;
+        }
+}
 
 #title { $page_title_font font-weight: bold; padding: 2em 0 0 0.65em; color: $*color_page_title; margin: 0; }
 
@@ -866,7 +894,7 @@ li.first-item {margin-left: 0;}
 
 #comments { border-top: 0.083em solid $*color_entry_border; padding-top: 0.5em;}
 
-.comment { border: 0.083em solid $*color_entry_border; margin: 0 1em 0 1em; }
+.comment { border: 0.083em solid $*color_entry_border; margin: 0 1em 0 1em; background-color: $*color_entry_background; }
 
 .comment-title {
     $comment_title_font
@@ -896,7 +924,7 @@ li.first-item {margin-left: 0;}
 
 .screened .comment-content {background: $*color_comment_screened; padding: 0.833em; }
 
-.partial .comment {color: transparent; padding: 0 0 0.5em 0; min-width: 16.667em; background: $*color_entry_background;}
+.partial .comment {color: transparent; padding: 0 0 0.5em 0; min-width: 16.667em;}
 .partial .comment-title { font-size: 1.166em; font-weight: bold; }
 .partial .comment-poster { color: $*color_entry_text; padding-left: .5em; }
 .partial .comment .datetime { border: 0; display: inline; background: none; margin: 0; padding: 0;}

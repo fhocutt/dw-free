@@ -107,7 +107,7 @@ sub event {
                                      });
 
     # create iframe from <lj-embed> tag
-    LJ::EmbedModule->expand_entry( $self->journal, \$event) ;
+    LJ::EmbedModule->expand_entry( $self->journal, \$event ) ;
 
     return $event;
 }
@@ -300,7 +300,8 @@ sub approve {
 
     if ( $res ) {
         $self->delete_from_queue;
-        return ( 1, LJ::item_link( $self->journal, $res->{itemid}, $res->{anum} ) );
+        my $entry = LJ::Entry->new( $self->journal, jitemid => $res->{itemid}, anum => $res->{anum} );
+        return ( 1, $entry->url );
     }
 
     my $error = "";

@@ -215,6 +215,18 @@ sub new_from_url {
     return undef;
 }
 
+sub new_from_url_or_ditemid {
+    my ( $class, $input, $u ) = @_;
+
+    my $e = LJ::Entry->new_from_url( $input );
+
+    # couldn't be parsed as a URL, try as a ditemid
+    $e ||= LJ::Entry->new( $u, ditemid => $input )
+        if $input =~ /^(?:\d+)$/;
+
+    return $e && $e->valid ? $e : undef;
+}
+
 sub new_from_row {
     my ( $class, %row ) = @_;
 
@@ -257,10 +269,10 @@ sub reply_url {
 # returns permalink url
 sub url {
     my ( $self, %opts ) = @_;
-    my %style_args = %{ delete $opts{style_args} || {} };
+    my %style_opts = %{ delete $opts{style_opts} || {} };
 
     my %args = %opts; # used later
-    @args{keys %style_args} = values %style_args;
+    @args{keys %style_opts} = values %style_opts;
 
     my $u = $self->{u};
     my $view = delete $opts{view};
@@ -543,7 +555,7 @@ sub slug {
     croak $u->errstr if $u->err;
 
     LJ::MemCache::set( [ $jid, "logslug:$jid:$self->{jitemid}" ], $slug );
-    
+
     $self->{_loaded_slug} = 1;
     return $self->{slug} = $slug;
 }
@@ -610,9 +622,9 @@ sub _load_comments {
         $row->{nodetype} = "L";
         $row->{nodeid}   = $nodeid;
         $comment->absorb_row(%$row);
-        
+
         push @comment_list, $comment;
-    }        
+    }
     $self->set_comment_list( @comment_list );
 
     return $self;
@@ -643,9 +655,13 @@ sub set_talkdata {
 }
 
 sub reply_count {
-    my $self = $_[0];
-    my $rc = $self->prop('replycount');
-    return $rc if defined $rc;
+    my ( $self, %opts ) = @_;
+
+    unless ( $opts{force_lookup} ) {
+        my $rc = $self->prop( 'replycount' );
+        return $rc if defined $rc;
+    }
+
     return LJ::Talk::get_replycount($self->journal, $self->jitemid);
 }
 
@@ -774,11 +790,9 @@ sub atom_entry {
     # a lack of a content element is allowed,  as long
     # as we maintain a proper 'alternate' link (above)
     if ( $syn_level eq 'full' || $syn_level eq 'cut' ) {
-        $atom_entry->content( $self->event_html );
-        $atom_entry->content->type( "html" );
+        $atom_entry->content( $self->event_raw );
     } elsif ( $syn_level eq 'summary' ) {
         $atom_entry->summary( $self->event_summary );
-        $atom_entry->summary->type( "html" );
     }
 
     return $atom_entry;
@@ -869,7 +883,9 @@ sub event_html
     my $event = $self->{event};
     LJ::CleanHTML::clean_event(\$event, $opts);
 
-    LJ::expand_embedded($self->{u}, $self->ditemid, LJ::User->remote, \$event, sandbox => $opts->{sandbox} );
+    LJ::expand_embedded($self->{u}, $self->ditemid, LJ::User->remote, \$event,
+        sandbox => $opts->{sandbox},
+        );
     return $event;
 }
 
@@ -1819,7 +1835,7 @@ sub get_log2_recent_user {
 ## see subs 'get_itemid_after2' and 'get_itemid_before2'
 ##
 sub get_itemid_near2 {
-    my ( $u, $jitemid, $after_before ) = @_;
+    my ( $u, $jitemid, $tagnav, $after_before ) = @_;
 
     $jitemid += 0;
 
@@ -1869,13 +1885,24 @@ sub get_itemid_near2 {
     ##
     my $result_ref;
     foreach my $limit (2, 10, 50, 100) {
-        $result_ref = $dbr->selectall_arrayref(
-            "SELECT jitemid, anum, $field FROM log2 use index (rlogtime,revttime) ".
-                "WHERE journalid=? AND $field $cmp1 ? AND jitemid <> ? " .
-                $secwhere. " ".
-                "ORDER BY $field $order LIMIT $limit",
-            undef, $jid, $stime, $jitemid
-        );
+        if($tagnav) {
+            $result_ref = $dbr->selectall_arrayref(
+                "SELECT log2.jitemid, anum, $field FROM log2 use index (rlogtime,revttime), logtagsrecent ".
+                    "WHERE log2.journalid=? AND $field $cmp1 ? AND log2.jitemid <> ? " .
+                    "AND log2.journalid=logtagsrecent.journalid AND log2.jitemid=logtagsrecent.jitemid AND logtagsrecent.kwid=$tagnav ".
+                    $secwhere. " ".
+                    "ORDER BY $field $order LIMIT $limit",
+                undef, $jid, $stime, $jitemid
+                );
+        } else {
+            $result_ref = $dbr->selectall_arrayref(
+                "SELECT jitemid, anum, $field FROM log2 use index (rlogtime,revttime) ".
+                    "WHERE journalid=? AND $field $cmp1 ? AND jitemid <> ? " .
+                    $secwhere. " ".
+                    "ORDER BY $field $order LIMIT $limit",
+                undef, $jid, $stime, $jitemid
+                );
+        }
 
         my %hash_times = ();
         map {$hash_times{$_->[2]} = 1} @$result_ref;
@@ -2029,6 +2056,70 @@ sub load_log_props2
 }
 
 # <LJFUNC>
+# name: LJ::load_talk_props2
+# class:
+# des:
+# info:
+# args:
+# des-:
+# returns:
+# </LJFUNC>
+sub load_talk_props2
+{
+    my $db = LJ::DB::isdb( $_[0] ) ? shift @_ : undef;
+    my ($uuserid, $listref, $hashref) = @_;
+
+    my $userid = want_userid($uuserid);
+    my $u = ref $uuserid ? $uuserid : undef;
+
+    $hashref = {} unless ref $hashref eq "HASH";
+
+    my %need;
+    my @memkeys;
+    foreach (@$listref) {
+        my $id = $_+0;
+        $need{$id} = 1;
+        push @memkeys, [$userid,"talkprop:$userid:$id"];
+    }
+    return $hashref unless %need;
+
+    my $mem = LJ::MemCache::get_multi(@memkeys) || {};
+
+    # allow hooks to count memcaches in this function for testing
+    if ($LJ::_T_GET_TALK_PROPS2_MEMCACHE) {
+        $LJ::_T_GET_TALK_PROPS2_MEMCACHE->();
+    }
+
+    while (my ($k, $v) = each %$mem) {
+        next unless $k =~ /(\d+):(\d+)/ && ref $v eq "HASH";
+        delete $need{$2};
+        $hashref->{$2}->{$_[0]} = $_[1] while @_ = each %$v;
+    }
+    return $hashref unless %need;
+
+    if (!$db || @LJ::MEMCACHE_SERVERS) {
+        $u ||= LJ::load_userid($userid);
+        $db = @LJ::MEMCACHE_SERVERS ? LJ::get_cluster_def_reader($u) :  LJ::get_cluster_reader($u);
+        return $hashref unless $db;
+    }
+
+    LJ::load_props("talk");
+    my $in = join(',', keys %need);
+    my $sth = $db->prepare("SELECT jtalkid, tpropid, value FROM talkprop2 ".
+                           "WHERE journalid=? AND jtalkid IN ($in)");
+    $sth->execute($userid);
+    while (my ($jtalkid, $propid, $value) = $sth->fetchrow_array) {
+        my $p = $LJ::CACHE_PROPID{'talk'}->{$propid};
+        next unless $p;
+        $hashref->{$jtalkid}->{$p->{'name'}} = $value;
+    }
+    foreach my $id (keys %need) {
+        LJ::MemCache::set([$userid,"talkprop:$userid:$id"], $hashref->{$id} || {});
+    }
+    return $hashref;
+}
+
+# <LJFUNC>
 # name: LJ::delete_all_comments
 # des: deletes all comments from a post, permanently, for when a post is deleted
 # info: The tables [dbtable[talk2]], [dbtable[talkprop2]], [dbtable[talktext2]],
@@ -2061,9 +2152,14 @@ sub delete_all_comments {
             $u->do( "DELETE FROM $table WHERE journalid=? AND jtalkid IN ($in)",
                     undef, $u->userid );
         }
+
+        my $ct = scalar @$t;
+        DW::Stats::increment( 'dw.action.comment.delete', $ct,
+                [ "journal_type:" . $u->journaltype_readable, 'method:delete_all_comments' ] );
+
         # decrement memcache
-        LJ::MemCache::decr( [$u->userid, "talk2ct:" . $u->userid], scalar(@$t) );
-        $loop = 0 unless @$t == $chunk_size;
+        LJ::MemCache::decr( [$u->userid, "talk2ct:" . $u->userid], $ct );
+        $loop = 0 unless $ct == $chunk_size;
     }
     return 1;
 
@@ -2101,6 +2197,9 @@ sub delete_comments {
     $num = 0 if $num == -1;
 
     if ( $num > 0 ) {
+        DW::Stats::increment( 'dw.action.comment.delete', $num,
+                [ "journal_type:" . $u->journaltype_readable, 'method:delete_comments' ] );
+
         $u->do( "UPDATE talktext2 SET subject=NULL, body=NULL $where" );
         $u->do( "DELETE FROM talkprop2 $where" );
     }
@@ -2129,7 +2228,7 @@ sub delete_comments {
 # des-jitemid: Journal itemid of item to delete.
 # des-quick: Optional boolean.  If set, only [dbtable[log2]] table
 #            is deleted from and the rest of the content is deleted
-#            later using [func[LJ::cmd_buffer_add]].
+#            later via TheSchwartz.
 # des-anum: The log item's anum, which'll be needed to delete lazily
 #           some data in tables which includes the anum, but the
 #           log row will already be gone so we'll need to store it for later.
@@ -2167,6 +2266,9 @@ sub delete_entry
         });
         return 0;
     }
+
+    DW::Stats::increment( 'dw.action.entry.delete', 1,
+            [ "journal_type:" . $u->journaltype_readable ] );
 
     # delete from clusters
     foreach my $t (qw(logtext2 logprop2 logsec2 logslugs)) {
@@ -2363,6 +2465,92 @@ sub get_logtext2
         $lt->{$id} = $val;
         LJ::MemCache::add([$journalid,"logtext:$clusterid:$journalid:$id"], $val);
         delete $need{$id};
+    }
+    return $lt;
+}
+
+# <LJFUNC>
+# name: LJ::get_talktext2
+# des: Retrieves comment text. Tries slave servers first, then master.
+# info: Efficiently retrieves batches of comment text. Will try alternate
+#       servers first. See also [func[LJ::get_logtext2]].
+# returns: Hashref with the talkids as keys, values being [ $subject, $event ].
+# args: u, opts?, jtalkids
+# des-opts: A hashref of options. 'onlysubjects' will only retrieve subjects.
+# des-jtalkids: A list of talkids to get text for.
+# </LJFUNC>
+sub get_talktext2
+{
+    my $u = shift;
+    my $clusterid = $u->{'clusterid'};
+    my $journalid = $u->{'userid'}+0;
+
+    my $opts = ref $_[0] ? shift : {};
+
+    # return structure.
+    my $lt = {};
+    return $lt unless $clusterid;
+
+    # keep track of itemids we still need to load.
+    my %need;
+    my @mem_keys;
+    foreach (@_) {
+        my $id = $_+0;
+        $need{$id} = 1;
+        push @mem_keys, [$journalid,"talksubject:$clusterid:$journalid:$id"];
+        unless ($opts->{'onlysubjects'}) {
+            push @mem_keys, [$journalid,"talkbody:$clusterid:$journalid:$id"];
+        }
+    }
+
+    # try the memory cache
+    my $mem = LJ::MemCache::get_multi(@mem_keys) || {};
+
+    if ($LJ::_T_GET_TALK_TEXT2_MEMCACHE) {
+        $LJ::_T_GET_TALK_TEXT2_MEMCACHE->();
+    }
+
+    while (my ($k, $v) = each %$mem) {
+        $k =~ /^talk(.*):(\d+):(\d+):(\d+)/;
+        if ($opts->{'onlysubjects'} && $1 eq "subject") {
+            delete $need{$4};
+            $lt->{$4} = [ $v ];
+        }
+        if (! $opts->{'onlysubjects'} && $1 eq "body" &&
+            exists $mem->{"talksubject:$2:$3:$4"}) {
+            delete $need{$4};
+            $lt->{$4} = [ $mem->{"talksubject:$2:$3:$4"}, $v ];
+        }
+    }
+    return $lt unless %need;
+
+    my $bodycol = $opts->{'onlysubjects'} ? "" : ", body";
+
+    # pass 1 (slave) and pass 2 (master)
+    foreach my $pass (1, 2) {
+        next unless %need;
+        my $db = $pass == 1 ? LJ::get_cluster_reader($clusterid) :
+            LJ::get_cluster_def_reader($clusterid);
+
+        unless ($db) {
+            next if $pass == 1;
+            die "Could not get db handle";
+        }
+
+        my $in = join(",", keys %need);
+        my $sth = $db->prepare("SELECT jtalkid, subject $bodycol FROM talktext2 ".
+                               "WHERE journalid=$journalid AND jtalkid IN ($in)");
+        $sth->execute;
+        while (my ($id, $subject, $body) = $sth->fetchrow_array) {
+            $subject = "" unless defined $subject;
+            $body = "" unless defined $body;
+            LJ::text_uncompress(\$body);
+            $lt->{$id} = [ $subject, $body ];
+            LJ::MemCache::add([$journalid,"talkbody:$clusterid:$journalid:$id"], $body)
+                unless $opts->{'onlysubjects'};
+            LJ::MemCache::add([$journalid,"talksubject:$clusterid:$journalid:$id"], $subject);
+            delete $need{$id};
+        }
     }
     return $lt;
 }

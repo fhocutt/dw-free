@@ -20,6 +20,8 @@ propgroup presentation {
     property use use_journalstyle_entry_page;
     property use margins_size;
     property use margins_unit;
+    property use medium_breakpoint_width;
+    property use large_breakpoint_width;
     property use custom_control_strip_colors;
 
     property use reverse_sortorder_group;
@@ -268,6 +270,9 @@ function prop_init {
 #Prints the stylesheet
 function Page::print_default_stylesheet()
 {
+    var string medium_media_query = generate_medium_media_query();
+    var string large_media_query = generate_large_media_query();
+
     var string page_background = generate_background_css($*image_background_page_url,$*image_background_page_repeat,$*image_background_page_position,$*color_page_background);
     var string header_background = generate_background_css($*image_background_header_url, $*image_background_header_repeat, $*image_background_header_position, $*color_header_background);
     var string footer_background = generate_background_css( "", "", "", $*color_footer_background );
@@ -406,14 +411,6 @@ function Page::print_default_stylesheet()
         font-size: 0.80em;
         $module_background
         color: $*color_module_text;
-        }
-
-    .one-column #secondary {
-        border-left: 5px double $*color_module_border;
-        border-right: 5px double $*color_module_border;
-        }
-
-    .one-column-split #secondary {
         border-left: 5px double $*color_module_border;
         border-right: 5px double $*color_module_border;
         }
@@ -437,11 +434,18 @@ function Page::print_default_stylesheet()
         font-weight:bold;
         letter-spacing:.3em;
     }
-    .two-columns-right #secondary .module-header {
-        text-align: right;
-    }
     #secondary .module-header a {
         color: $*color_module_title;
+    }
+
+    @media $medium_media_query {
+        .multiple-columns #secondary {
+            border: none;
+        }
+
+        .two-columns-right #secondary .module-header {
+            text-align: right;
+        }
     }
 
     .manage-link {
@@ -564,12 +568,32 @@ function Page::print_default_stylesheet()
         color: $*color_entry_link_hover;
     }
 
+    /* ensure comment content stretches out horizontally so it's readable */
+    .comment-content:before {
+        content: "";
+        display: block;
+        overflow: hidden;
+        width: 10em;
+    }
+    .comment-content { border-top: 1px transparent solid; } /* for firefox */
+
     /* To prevent overlapping when icon's on the left */
     /* and list is the first thing in content */
     .entry-content li,
     .comment-content li {
         list-style-position: inside;
         }
+
+    /* To constrain the width and prevent layout breaking */
+    .entry-content img, .comment-content img {
+        max-width: 100%;
+        height: auto;
+        }
+
+    @media $large_media_query {
+        .entry-content img, .comment-content img { max-width: none; }
+    }
+
 
     .entry .footer,
     .comment .footer {
@@ -729,8 +753,10 @@ function Page::print_default_stylesheet()
         display: inline;
         padding: .2em 1em .2em .5em;
     }
-    .two-columns-left .module-section-two .module-navlinks {
-        text-align: right;
+    @media $medium_media_query {
+        .two-columns-left .module-section-two .module-navlinks {
+            text-align: right;
+        }
     }
     .module-section-one .module-navlinks {
         clear: both;
@@ -753,8 +779,10 @@ function Page::print_default_stylesheet()
         $entry_title_font
     }
 
-    .two-columns-right .module-section-one .module-userprofile .userpic {
-        text-align: right;
+    @media $medium_media_query {
+        .two-columns-right .module-section-one .module-userprofile .userpic {
+            text-align: right;
+        }
     }
 
     .module-section-two .module-calendar,
@@ -762,7 +790,13 @@ function Page::print_default_stylesheet()
         text-align: center;
         font-size: 0.8em;
         padding:5px;
-        margin: 0px 190px 0px 100px;
+        margin: 0;
+    }
+    @media $medium_media_query {
+        .module-section-two .module-calendar,
+        .module-section-three .module-calendar {
+            margin: 0px 190px 0px 100px;
+        }
     }
     .module-calendar table {
         letter-spacing: 0.2em;
@@ -806,19 +840,22 @@ function Page::print_default_stylesheet()
         text-align: right;
     }
 
-    .one-column #primary,
-    .one-column #secondary {
+    #primary,
+    #secondary {
         margin: 0 5%;
     }
 
-    .two-columns-left #primary {float: right;}
-    .two-columns-left #secondary { float: right; }
-    .two-columns-right #primary { float: left; }
-    .two-columns-right #secondary {float: left;}
-    .two-columns-left #primary { right: 10%; width: 70%; }
-    .two-columns-left #secondary { right: 10%; width: 15%; }
-    .two-columns-right #primary {left: 10%; width: 70%;}
-    .two-columns-right #secondary {left: 10%; width: 15%;}
+    @media $medium_media_query {
+        .multiple-columns #primary, .multiple-columns #secondary { margin: 0; }
+        .two-columns-left #primary { float: right;}
+        .two-columns-left #secondary { float: right; }
+        .two-columns-right #primary { float: left; }
+        .two-columns-right #secondary {float: left;}
+        .two-columns-left #primary { right: 10%; width: 70%; }
+        .two-columns-left #secondary { right: 10%; width: 15%; }
+        .two-columns-right #primary {left: 10%; width: 70%;}
+        .two-columns-right #secondary {left: 10%; width: 15%;}
+    }
 
 $userpic_css
 
@@ -1013,6 +1050,7 @@ function Page::print()
     println """<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
     <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
     <head>""";
+        $this->print_meta_tags();
         $this->print_head();
         $this->print_stylesheets();
         $this->print_head_title();
@@ -1021,7 +1059,6 @@ function Page::print()
         $this->print_wrapper_start();
         $this->print_control_strip();
         println "<div id=\"header\">";
-            println "<a name=\"top\"></a>";
             $this->print_global_title();
             $this->print_global_subtitle();
             $this->print_module_section("two");
@@ -1061,3 +1098,4 @@ function Page::print()
     $this->print_wrapper_end();
     println "</html>";
 }
+

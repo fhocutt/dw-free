@@ -622,14 +622,6 @@ userproplist.moderated:
   multihomed: 0
   prettyname: Moderation status
 
-userproplist.msn:
-  cldversion: 0
-  datatype: char
-  des: MSN Username
-  indexed: 1
-  multihomed: 1
-  prettyname: MSN Username
-
 userproplist.newesteventtime:
   cldversion: 4
   datatype: char
@@ -934,14 +926,6 @@ userproplist.opt_showbday:
   multihomed: 0
   prettyname: Show Birthday
 
-userproplist.opt_showljtalk:
-  cldversion: 4
-  datatype: char
-  des: User selected setting for showing (Y) or hiding (N) the LJ Talk field on their profile
-  indexed: 0
-  multihomed: 0
-  prettyname: Show LJ Talk field?
-
 userproplist.opt_showlocation:
   cldversion: 4
   datatype: char
@@ -957,14 +941,6 @@ userproplist.opt_showmutualfriends:
   indexed: 1
   multihomed: 0
   prettyname: Mutual Friends Display
-
-userproplist.opt_showonlinestatus:
-  cldversion: 0
-  datatype: char
-  des: Show online status to Everyone(Y), Mutual Friends(F) or Nobody(N).
-  indexed: 0
-  multihomed: 0
-  prettyname: Show online status
 
 userproplist.opt_stylemine:
   cldversion: 4
@@ -1069,6 +1045,14 @@ userproplist.pinboard:
   indexed: 0
   multihomed: 0
   prettyname: Pinboard user account name
+
+userproplist.pinterest:
+  cldversion: 4
+  datatype: char
+  des: Pinterest user account name
+  indexed: 0
+  multihomed: 0
+  prettyname: Pinterest user account name
 
 userproplist.plurk:
   cldversion: 4
@@ -1245,6 +1229,14 @@ userproplist.stylesys:
   indexed: 0
   multihomed: 0
   prettyname: Style System to use
+
+userproplist.suspendmsg:
+  cldversion: 4
+  datatype: char
+  des: Internal notes, not shown to user
+  indexed: 0
+  multihomed: 0
+  prettyname: Sets message to be shown when running suspend command against this account
 
 userproplist.timeformat_24:
   cldversion: 4
@@ -1514,7 +1506,7 @@ logproplist.interface:
 logproplist.opt_backdated:
   datatype: bool
   des: Set to true if this item shouldn't show up on people's friends lists (because it occurred in the past)
-  prettyname: Back-dated
+  prettyname: Don't Show on Reading Pages
   sortorder: 35
   ownership: user
 

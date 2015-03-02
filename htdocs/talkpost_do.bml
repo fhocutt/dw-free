@@ -103,11 +103,6 @@ body<=
     # input, since it may be not in UTF-8 in replies coming from mail
     # clients. We call it later.
 
-    my $remote_ip = LJ::get_remote_ip();
-    if (($POST{'usertype'} eq "anonymous" || $POST{'usertype'} eq "openid") && LJ::is_open_proxy($remote_ip)) {
-        return LJ::bad_input("Your IP address ($remote_ip) is detected as an open proxy (a common source of spam) so comment access is denied.  If you do not believe you're accessing the net through an open proxy, please contact your ISP or this site's tech support to help resolve the problem.");
-    }
-
     my $remote = LJ::get_remote();
     my $journalu = LJ::load_user($POST{journal});
     return LJ::bad_input('Unknown journal.  Please go back and try again.') unless $journalu;
@@ -117,7 +112,6 @@ body<=
     LJ::need_res( LJ::Talk::init_iconbrowser_js( 1 ) )
         if $remote && $remote->can_use_userpic_select;
     LJ::set_active_resource_group( "jquery" );
-
 
     # FIXME: this isn't entirely correct, if ecphash is present but ignored/incorrect
     # that fix would need to be done in talklib.pl
@@ -130,7 +124,10 @@ body<=
     if ($POST{'submitpreview'} || ($POST{'qr'} && $POST{'do_spellcheck'})) {
         my $cookie_auth;
         $cookie_auth = 1 if $POST{usertype} eq "cookieuser";
-        my $talkurl = $journalu->journal_base . "/$POST{itemid}.html";
+
+        my $entry = LJ::Entry->new( $journalu, ditemid => $POST{itemid} + 0 );
+        my $talkurl = $entry->url;
+
         $title = $ML{'.title.preview'};
         return LJ::Talk::Post::make_preview($talkurl, $cookie_auth, \%POST);
     }
@@ -242,29 +239,47 @@ body<=
         my $commentu = $init ? $init->{comment}->{u} : undef;
         my $parentu = $init ? $init->{parent}->{u} : undef;
         if ( $journalu && $journalu->is_community ) {
-            if ( $POST{'usertype'} eq 'anonymous' ) {
-                $mlcode = 'success.screened.comm.anon2';
-            } elsif ( $commentu && $commentu->can_manage( $journalu ) ) {
-                $mlcode = '.success.screened.comm.owncomm3';
-            } else {
-                $mlcode = '.success.screened.comm2';
+            # if there's a separate parent commenter
+            if ( $parentu && !($parentu->equals ( $journalu )) {
+                if ( $POST{'usertype'} eq 'anonymous' ) { 
+                    $mlcode = '.success.screened.comm.anon.diffparent';
+                } elsif ( $commentu && $commentu->can_manage( $journalu ) ) {
+                    $mlcode = '.success.screened.comm.owncomm.diffparent';
+                } else {
+                    $mlcode = '.success.screened.comm.diffparent';
+                }
+            }
+            else {
+                if ( $POST{'usertype'} eq 'anonymous' ) {
+                    $mlcode = '.success.screened.comm.anon3';
+                } elsif ( $commentu && $commentu->can_manage( $journalu ) ) {
+                    $mlcode = '.success.screened.comm.owncomm4';
+                } else {
+                    $mlcode = '.success.screened.comm3';
+                }
             }
         } else {  # not a community
-            if ( $POST{'usertype'} eq 'anonymous' ) {
-                $mlcode = '.success.screened.user.anon2';
-            } elsif ( $commentu && $commentu->equals( $journalu ) ) {
-                if ($parentu && !($parentu->equals( $commentu) ) {
-                    $mlcode = '.success.screened.user.ownjournal.otherparent'
-                } else {     #no parent comment or replying to own comment
-                    $mlcode = '.success.screened.user.ownjournal2';
+            # if there's a separate parent commenter
+            if ($parentu && !($parentu->equals( $journalu ) ) ) {
+                if ( $POST{'usertype'} eq 'anonymous' ) {
+                    $mlcode = '.success.screened.user.anon.diffparent';
+                } elsif ( $commentu && $commentu->equals( $journalu ) ) {
+                    $mlcode = '.success.screened.user.ownjournal.diffparent';
+                } else {
+                    $mlcode = '.success.screened.user.diffparent';
                 }
             } else {
-                $mlcode = '.success.screened.user2';
+                if ( $POST{'usertype'} eq 'anonymous' ) {
+                       $mlcode = '.success.screened.user.anon3';
+                } elsif ( $commentu && $commentu->equals( $journalu ) ) {
+                    $mlcode = '.success.screened.user.ownjournal2';
+                } else {
+                    $mlcode = '.success.screened.user3';
+                }
             }
         }
     }
 
-    $ret .= "<?p " . BML::ml($mlcode, {'aopts' => "href='$commentlink'"}) . " p?>";
 
     # did this comment unscreen its parent?
     if ($wasscreened and $parent->{state} ne 'S') {

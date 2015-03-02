@@ -149,8 +149,6 @@
 
 .flag=Flag Journal
 
-.hubbub.header=PubSubHubbub Status
-
 .im.aol=AIM
 
 .im.aol.status=AIM status
@@ -168,8 +166,6 @@
 .im.jabber=Jabber
 
 .im.lastfm=Last.fm
-
-.im.msn=MSN
 
 .im.skype=Skype
 
@@ -253,8 +249,6 @@
 
 .label.moredetails=(more details...)
 
-.label.msnusername=MSN Username:
-
 .label.mutual=Mutual Friends:
 
 .label.name=Name:
@@ -276,18 +270,6 @@
 .label.skype=Skype:
 
 .label.supportpoints=Support points
-
-.label.syn.hubbub.goodfor=Expiration time:
-
-.label.syn.hubbub.huburl=Hub URL:
-
-.label.syn.hubbub.id=Subscription id:
-
-.label.syn.hubbub.lastseen=Last seen at:
-
-.label.syn.hubbub.pings=Pings received:
-
-.label.syn.hubbub.topicurl=Topic URL:
 
 .label.syndicatedfrom=Source:
 
@@ -410,6 +392,8 @@
 .services.ffnet=FanFiction.net
 
 .service.pinboard=Pinboard
+
+.service.pinterest=Pinterest
 
 .service.plurk=Plurk
 

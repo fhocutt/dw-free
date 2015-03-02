@@ -7,7 +7,7 @@
 # Authors:
 #      Andrea Nall <anall@andreanall.com>
 #
-# Copyright (c) 2010-2011 by Dreamwidth Studios, LLC.
+# Copyright (c) 2010-2014 by Dreamwidth Studios, LLC.
 #
 # This program is free software; you may redistribute it and/or modify it under
 # the same terms as Perl itself.  For a copy of the license, please reference
@@ -41,6 +41,15 @@ sub new {
 
     $context->define_filter( 'ml', [ \&DW::Template::Filters::ml, 1 ] );
     $context->define_filter( 'js', [ \&DW::Template::Filters::js, 1 ] );
+    $context->define_filter( 'time_to_http', [ \&DW::Template::Filters::time_to_http ] );
+
+    # refresh on each page load, because this changes depending on whether you're using HTTP or HTTPS
+    $context->stash->{site} = {
+        root => $LJ::SITEROOT,
+        imgroot => $LJ::IMGPREFIX,
+        jsroot  => $LJ::JSPREFIX,
+        statroot=> $LJ::STATPREFIX,
+    };
 
     return $self;
 }

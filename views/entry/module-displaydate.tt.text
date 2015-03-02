@@ -1,14 +1,11 @@
 ;; -*- coding: utf-8 -*-
 .header=Display Date
 
-.label.autoupdate=Use the time when entry is posted
+.label.autoupdate=Use the current time
 
-.label.dateoutoforder=Don't show on Reading Pages (allows dating out of order)
+.label.dateoutoforder2=Don't show on Reading pages
 
-.label.sticky=Make sticky (future option?)
+.label.picker.time=Time Picker
 
-.title.entrytime=displayed entry date; example [[example]]
+.label.picker.date=Date Picker
 
-.title.entrytime_hr=hours; 24-hour time
-
-.title.entrytime_min=minutes

@@ -53,6 +53,8 @@ collapsible.collapsed=Expand
 
 collapsible.expanded=Collapse
 
+comment.rpc.posted=Your comment has been posted.
+
 contentflag.viewingconcepts.bycommunity=You are about to view content that a community administrator has advised should be viewed with discretion.
 
 contentflag.viewingconcepts.byjournal=You're about to view content which the journal owner has advised should be viewed with discretion.
@@ -65,211 +67,15 @@ contentflag.viewingexplicit.byjournal=You're about to view content that a commun
 
 contentflag.viewingexplicit.byposter=You're about to view content that the poster has marked as potentially inappropriate for anyone under the age of 18.
 
-cprod.birthday.link.v1=birthdays
-
-cprod.birthday.text.v1=Hey, [[user]], see which of your friends' [[link]] are coming up! Dreamwidth keeps a list of their birthdays for you.
-
-cprod.controlstrip.link.v1=Navigation Strip
-
-cprod.controlstrip.text.v1=9 out of 10 LJ users prefer the [[link]].  (OK we made that up, but you should check it out anyway.)
-
-cprod.createstyles.text.v1=Your account type does not support creating styles.
-
 cprod.directory.text3.v1=Your account level doesn't give you access to the directory.
 
-cprod.editpics.text6.v1=You've reached your limit of [[num]] userpics.
-
 cprod.editpics.text7.v1=You've reached your limit of [[num]] icons.
-
-cprod.editpicsmax.text5.v1=You've reached your limit of [[num]] userpics.
-
-cprod.editstyles.text.v1=Your account type does not permit you to edit styles.
-
-cprod.feeds.link.v1=syndicated feeds
-
-cprod.feeds.text.v1=Find good content outside of LJ? Add [[link]] to your Friends page so you never have to leave.
-
-cprod.friendsfriends.link2.v1=Friends of Friends
-
-cprod.friendsfriends.text2.v1=[[link]] page shows all your friends' Friends pages in one Friends page.  Say that three times fast!
 
 cprod.friendsfriendsinline.text3.v1=Sorry, this account type does not permit showing your network.
 
 cprod.links.text3.v1=Your account type doesn't permit you to have more links.
 
-cprod.polls.link.v1=poll creation wizard
-
-cprod.polls.text.v1=[[user]], you can post a poll in your journal using our [[link]]?  [[poll]]
-
 cprod.syn.text.v1=Note: This feature isn't available to your account type.
-
-cprod.textmessaging.text3.v1=Your account type doesn't permit you to use this feature.
-
-cprod.userpic.link.v1=default userpic
-
-cprod.userpic.text.v1=[[user]], did you know you could pick a [[link]] to go along with your posts and comments?
-
-crumb.acctstatus=Account Status
-
-crumb.addfriend=Add to Circle
-
-crumb.advcustomize=Customize Advanced S2 Settings
-
-crumb.advsearch=Advanced Search
-
-crumb.birthdays=Birthdays
-
-crumb.changeemail=Change Email Address
-
-crumb.changepass=Change Password
-
-crumb.comminvites=Community Invitations
-
-crumb.commmembers=Community Membership
-
-crumb.commpending=Pending Memberships
-
-crumb.commsearch=Community Search
-
-crumb.commsentinvites=Sent Invitations
-
-crumb.commsettings=Community Settings
-
-crumb.community=Community Center
-
-crumb.createcommunity=Create Community
-
-crumb.createjournal_1=Create Your Account
-
-crumb.createstyle=Create Style
-
-crumb.customize=Customize S2 Settings
-
-crumb.customizelayer=Individual Customizations
-
-crumb.delcomment=Delete Comment
-
-crumb.domain=Domain Aliasing
-
-crumb.editcomments=Comment Settings
-
-crumb.editentries=Edit Entries
-
-crumb.editfriendgrps=Edit Friends Groups
-
-crumb.editfriends=Edit Friends
-
-crumb.editinfo=Personal Info
-
-crumb.editpics=User Pictures
-
-crumb.editprofile=Edit Profile
-
-crumb.editsettings=Viewing Options
-
-crumb.editstyle=Edit Style
-
-crumb.edituserpics=Edit Userpics
-
-crumb.emailgateway=Email Gateway
-
-crumb.emailmanage=Email Management
-
-crumb.encodings=About Encodings
-
-crumb.export=Export Journal
-
-crumb.faq=Frequently Asked Questions
-
-crumb.feedstersearch=Search a Journal
-
-crumb.friends=Relationship Tools
-
-crumb.friendsfilter=Friends Filter
-
-crumb.home=Home
-
-crumb.invitefriend=Invite Someone
-
-crumb.joincomm=Join Community
-
-crumb.latestposts=Latest Posts
-
-crumb.layerbrowse=Public Layer Browser
-
-crumb.leavecomm=Leave This Community
-
-crumb.linkslist=Your Links
-
-crumb.login=Log in
-
-crumb.logout=Logout
-
-crumb.lostinfo=Lost Information
-
-crumb.manage=Manage Accounts
-
-crumb.managecommunity=Community Management
-
-crumb.managelogins=Manage Your Login Sessions
-
-crumb.memories=Memorable Entries
-
-crumb.mobilepost=Mobile Post Settings
-
-crumb.moderate=Community Moderation
-
-crumb.moodeditor=Custom Mood Theme Editor
-
-crumb.moodlist=Mood Viewer
-
-crumb.phonepostsettings=Phone Post
-
-crumb.popfaq=Popular FAQs
-
-crumb.register=Confirm Email
-
-crumb.searchinterests=Search By Interest
-
-crumb.seeoverrides=View User Overrides
-
-crumb.setpgpkey=Public Key
-
-crumb.sitestats=Site Statistics
-
-crumb.stats=Statistics
-
-crumb.styles=Styles
-
-crumb.support=Support
-
-crumb.supportact=Request Action
-
-crumb.supportappend=Append to Request
-
-crumb.supporthelp=Request Board
-
-crumb.supportnotify=Notification Settings
-
-crumb.supportscores=High Scores
-
-crumb.supportsubmit=Submit Request
-
-crumb.textmessage=Send Text Message
-
-crumb.translate=Translation Area
-
-crumb.translateteams=Translation Teams
-
-crumb.unsubscribe=Unsubscribe
-
-crumb.update=Update Journal
-
-crumb.utf8convert=UTF-8 Converter
-
-crumb.yourlayers=Your Layers
-
-crumb.yourstyles=Your Styles
 
 customize.cats.all=All
 
@@ -395,6 +201,8 @@ date.month.september.long=September
 
 date.month.september.short=Sep
 
+edges.join.error.setage=Please <a href="[[url]]">edit your profile</a> to register your age.
+
 edges.join.error.targetbanneduser=You have been banned from the community.
 
 edges.join.error.targetnotcommunity=The account being joined must be a community.
@@ -411,7 +219,7 @@ edges.join.error.usernotvisible=Your account must be visible.
 
 edges.join.error.userunderage=You must be 18 or older to join this community.
 
-edges.leave.error.lastmaintainer=You can't leave this community because you're the only administrator.  If you want to leave the community, please appoint another adminstrator and then try leaving again.
+edges.leave.error.lastmaintainer2=You can't leave this community because you're the only administrator.  If you want to leave the community, please <a href="[[url]]">appoint another adminstrator</a> and then try leaving again.
 
 edges.trust.error.targetinvalidstatusvis=The person who you are granting access to must not be purged, suspended, or locked.
 
@@ -657,6 +465,21 @@ Enjoy!
 [[siteroot]]/
 .
 
+email.massprivacy.subject=Updated entry security for [[user]]
+
+email.massprivacy.body<<
+Dear [[user]],
+
+At your request, [[count]] [[oldsecurity]] [[?count|entry|entries]] [[timeframe]] have now been changed to [[newsecurity]].
+
+If you want to change the security on more of your entries, you can do so at:
+
+    [[privacyurl]]
+
+[[sitenameshort]] Team
+[[siteroot]]/
+.
+
 emailpost.reply.address=Reply as [[user]]
 
 embedmedia.vimeo=Watch on Vimeo
@@ -685,7 +508,7 @@ entryform.backdated=Entry is Backdated:
 
 entryform.backdated2=Backdate &amp; exclude from all Friends Pages
 
-entryform.backdated3=Don't show on Reading Pages (allows dating out of order)
+entryform.backdated4=Don't show on Reading Pages
 
 entryform.comment.disable=Disable comments?
 
@@ -1340,6 +1163,8 @@ There has been a new submission for the community '[[community]]', which you mod
    Subject: [[subject]]
 .
 
+esn.moderated_submission.handled.body=The submission to the community '[[community]]' has been handled.
+
 esn.moderated_submission.entry=[[openlink]]Accept or reject this submission[[closelink]]
 
 esn.moderated_submission.queue=[[openlink]]View the entire moderation queue[[closelink]]
@@ -1838,7 +1663,7 @@ fcklang.userprompt.site=External Site (optional)
 
 fcklang.userprompt.user=Username
 
-fcklang.videoprompt=Please enter the YouTube, PhotoBucket, or Google Video URL:
+fcklang.videoprompt=Please enter the YouTube or Google Video URL:
 
 Help=Help
 
@@ -2188,8 +2013,6 @@ menunav.shop.sponsor=Gift a Random User
 menunav.shop.transferpoints=Transfer Shop Points
 
 notification_method.email.title=Email
-
-notification_method.im.title=IM
 
 notification_method.inbox.title=Inbox
 
@@ -2795,11 +2618,15 @@ setting.display.journalentrystyle.option=Show my journal's entry pages in my cho
 
 setting.display.journalentrystyle.option.comm=Show this community's entry pages in its chosen style instead of the site layout
 
-setting.display.journaliconstyle.label=Journal Icons Style
+setting.display.journaliconstyle.label2=Icons Style
 
 setting.display.journaliconstyle.note=Note: this setting affects everyone who views your journal who has not chosen a different Icons View Style.
 
+setting.display.journaliconstyle.note.comm=Note: this setting affects everyone who views this community who has not chosen a different Icons View Style.
+
 setting.display.journaliconstyle.option=Show my journal's icons pages in my chosen style instead of the site layout
+
+setting.display.journaliconstyle.option.comm=Show this community's icons pages in its chosen style instead of the site layout
 
 setting.display.logins.label=Logins
 
@@ -3024,6 +2851,10 @@ setting.minsecurity.option.select.private2=Just Me (Private)
 
 setting.minsecurity.option.select.public2=Everyone (Public)
 
+setting.mobileview.des=Turn off mobile view for this device
+
+setting.mobileview.label=Mobile View
+
 setting.name.question=What's your name?
 
 setting.navstrip.label=Navigation Strip
@@ -3084,9 +2915,17 @@ setting.sitescheme.label=Site Skin
 
 setting.sitescheme.label=Site Scheme
 
-setting.stickyentry.error.invalid=Invalid Dreamwidth entry ID or URL entered.
+setting.stickyentry.details.label=Note: blank entries will be ignored.
+
+setting.stickyentry.error.invalid2=Invalid Dreamwidth entry ID or URL entered for Sticky [[stickyid]].
+
+setting.stickyentry.error.duplicate=Duplicate ID or URL entered for Sticky [[stickyid]].
 
 setting.stickyentry.label=ID or URL of entry to make sticky
+
+setting.stickyentry.label2=IDs or URLs of Sticky Entries
+
+setting.stickyentryi.label=Sticky [[stickyid]]
 
 setting.stylemine.label=Comment Pages
 
@@ -4005,6 +3844,8 @@ subscribe_interface.unavailable_subs.note=These notification options are only av
 
 success=Success
 
+success.next.header=Next steps:
+
 support.answertype.answer=Answer
 
 support.answertype.bounce=Bounce to Email & Close
@@ -4054,13 +3895,14 @@ You are receiving this email because you've requested notifications of new suppo
 
 .
 
-support.email.notif.update.body2<<
+support.email.notif.update.body3<<
 A follow-up to the following [[sitename]] support request has been submitted:
 
 Category: [[category]]
 Subject: [[subject]]
 User: [[username]]
 URL: [[url]]
+Type: [[type]]
 Text:
 
 [[text]]
@@ -4681,8 +4523,6 @@ widget.communitymanagement.pending.member=[[num]] [[?num|member|members]]
 
 widget.communitymanagement.title=Community Management
 
-widget.createaccount.btn=Create Account
-
 widget.createaccount.error.birthdate.invalid=You must enter a valid birthdate.
 
 widget.createaccount.error.birthdate.underage=You must be over 13 to create an account.
@@ -4697,7 +4537,7 @@ widget.createaccount.error.list=Errors in form:
 
 widget.createaccount.error.password.asciionly=You can only use ASCII symbols in the password.
 
-widget.createaccount.error.password.bad=Bad password:
+widget.createaccount.error.password.bad2=Bad password: [[reason]]
 
 widget.createaccount.error.password.blank=You must enter a password.
 
@@ -4729,46 +4569,6 @@ widget.createaccount.error.username.mustenter=You must enter an account name.
 
 widget.createaccount.error.username.purged=That account name has been deleted and purged. At the moment, you can't register it. (We'll be changing that soon.)
 
-widget.createaccount.field.birthdate=Birthdate (month-dd-yyyy):
-
-widget.createaccount.field.captcha.hear=Type the numbers you hear:
-
-widget.createaccount.field.captcha.play=Play the sound
-
-widget.createaccount.field.captcha.visual=Type the letters and numbers seen above:
-
-widget.createaccount.field.captcha2=Anti-spam measure:
-
-widget.createaccount.field.confirmpassword=Confirm Password:
-
-widget.createaccount.field.email=Email Address:
-
-widget.createaccount.field.news=Yes, email me [[sitename]] announcements.
-
-widget.createaccount.field.paidaccount=<strong>Note:</strong> This account will be a [[type]] for [[nummonths]] [[?nummonths|month|months]].
-
-widget.createaccount.field.paidaccount.permanent=<strong>Note:</strong> This account will be a [[type]].
-
-widget.createaccount.field.password=Password:
-
-widget.createaccount.field.tos=I've read and agree to [[sitename]]'s <a [[aopts1]]>Terms of Service</a> and <a [[aopts2]]>Privacy Policy</a>.
-
-widget.createaccount.field.username=Account name:
-
-widget.createaccount.field.username.available=This account name is available
-
-widget.createaccount.tip.birthdate=Required by law. No worries, you can set privacy on this after you're done creating an account.
-
-widget.createaccount.tip.birthdate2=This information is required by law. You must enter your real birthdate. You can change it after you've created your account. We display only the month and day by default.
-
-widget.createaccount.tip.captcha=If you can't read the text, type "audio" to take a sound test instead.
-
-widget.createaccount.tip.email=We need your email address to send you important information. We'll never give your email address to anyone else.
-
-widget.createaccount.tip.password2=Choose a secure password that's between 6 and 30 characters long with at least 4 unique characters and one non-letter character (digit or symbol). Passwords can't be based on your account name, your real name, or your email address for security reasons.
-
-widget.createaccount.tip.username=Your account name is used in your journal URL. Use lower-case letters (a-z), digits (0-9), and underscores (_), and choose a name between 2 and 25 characters long. You can't start or end your account name with an underscore, nor have two consecutive underscores.
-
 widget.createaccountentercode.btn.proceed=Proceed.
 
 widget.createaccountentercode.code=Code:
@@ -4793,9 +4593,9 @@ widget.createaccountinviter.addcomms.note.mm=[[user]] is an administrator of thi
 
 widget.createaccountinviter.addcomms.note.moderated=This community has moderated membership; you'll have to wait for an administrator to approve your membership.
 
-widget.createaccountinviter.addinviter.trust=Add [[user]] to your Access List.
+widget.createaccountinviter.addinviter.trust2=Add [[user]] to your Access List
 
-widget.createaccountinviter.addinviter.watch=Add [[user]] to your subscriptions.
+widget.createaccountinviter.addinviter.watch2=Add [[user]] to your subscriptions
 
 widget.createaccountinviter.title=Manage Your Circle
 
@@ -4813,7 +4613,9 @@ widget.createaccountnextsteps.steps.userpics=Upload icons
 
 widget.createaccountnextsteps.title=What's Next?
 
-widget.createaccountprofile.field.bio=Tell us a little (or a lot) about yourself:
+widget.createaccountprofile.field.bio.note=Bio
+
+widget.createaccountprofile.field.bio2=Tell us a little (or a lot) about yourself
 
 widget.createaccountprofile.field.gender=For statistical purposes, please provide your gender. (It will not be publicly displayed.)
 
@@ -4841,7 +4643,7 @@ widget.createaccountprofile.field.name=Name
 
 widget.createaccountprofile.info=You can tell other people about yourself here.  All fields are optional.
 
-widget.createaccountprofile.title=Start Creating Your Profile
+widget.createaccountprofile.title2=Start creating your profile
 
 widget.createaccountprogressmeter.step1=Create Account
 
@@ -5075,9 +4877,13 @@ widget.inbox.menu.delete.btn=Delete Selected
 
 widget.inbox.menu.delete_all.btn=Delete All
 
+widget.inbox.menu.delete_all.entry.btn=Delete All for this Entry
+
 widget.inbox.menu.delete_all.subfolder.btn=Delete All in Subfolder
 
 widget.inbox.menu.mark_all_read.btn=Mark All Read
+
+widget.inbox.menu.mark_all_read.entry.btn=Mark All Read for this Entry
 
 widget.inbox.menu.mark_all_read.subfolder.btn=Mark Subfolder Read
 
@@ -5343,8 +5149,6 @@ widget.search.interestonly.btn=Find
 
 widget.search.jabber=Jabber ID
 
-widget.search.msn=MSN
-
 widget.search.region=Region
 
 widget.search.siteuser=Site and Account
@@ -5428,48 +5232,6 @@ widget.shopitemoptions.price.seed=Forever for [[points]] points ([[price]])
 widget.sitesearch.desc=Search for entries containing:
 
 widget.sitesearch.title=Search [[sitename]]
-
-widget.support.submit.button=Submit Request
-
-widget.support.submit.captcha=Prove You're Human
-
-widget.support.submit.captcha.note=If you can't pass the human test, email your inquiry to: [[email]]
-
-widget.support.submit.category=Category
-
-widget.support.submit.complete.text<<
-Your request has been filed. You can track its progress at:
-<blockquote><a href='[[url]]'>[[url]]</a></blockquote>
-If you have any additional questions or comments, you can add them to your request at any time.
-.
-
-widget.support.submit.language=Language
-
-widget.support.submit.language.note=Select the language in which you'd prefer to receive a response.
-
-widget.support.submit.language.other=(Other)
-
-widget.support.submit.login.note=If you're a [[sitename]] user, <a [[loginlink]]>please log in</a> before submitting your request.
-
-widget.support.submit.nonpublic=* Only visible to staff and those trusted volunteers with appropriate privileges
-
-widget.support.submit.notshow=(not shown to the public)
-
-widget.support.submit.question=Question or Problem
-
-widget.support.submit.question.note=Don't include confidential information like your password or phone number. Don't use HTML in your submission.
-
-widget.support.submit.summary=Summary
-
-widget.support.submit.text_intro=If you have a question or concern about a payment you've made, we will be happy to assist you.
-
-widget.support.submit.text_question=Make sure to include your username. If you were buying a gift for another user, include their username as well.
-
-widget.support.submit.text_submit=Submit Inquiry
-
-widget.support.submit.yourmail=Your email address:
-
-widget.support.submit.yourname=Your name:
 
 widget.themechooser.btn.page=Go
 

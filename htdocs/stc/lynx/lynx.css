@@ -54,7 +54,7 @@
     color: #000;
     padding: 0.5em;
 }
-.highlight-box, .message-box, .error-box {
+.highlight-box, .message-box, .error-box, .alert-box {
     margin: 1em auto;
     padding: 0.5em;
 }
@@ -69,7 +69,7 @@
 }
 .warning-box {
 }
-.error-box {
+.error-box, .alert-box {
 }
 
 .odd, tr.odd th, tr.odd td {
@@ -145,3 +145,17 @@ td.highlight { background-color: #eeeeee; }
 #qrformdiv table {
     border: 1px solid #999;
 }
+
+/* MonthPage */
+
+#archive-month .navigation li, #archive-month .navigation a {display: inline; }
+#archive-month .highlight-box {margin: auto; text-align: center;display: inline-block;}
+#archive-month {text-align: center;}
+#archive-month .month {text-align: left;}
+#archive-month h3.entry-title {display: inline; font-size:1em;font-weight: normal;}
+#archive-month .entry-title, #archive-month .access-filter, #archive-month .poster {margin-left:1em;}
+#archive-month .empty {margin: 0;}
+#archive-month .datetime {font-style: italic;}
+#archive-month .tag li {display: inline; list-style:none;}
+
+

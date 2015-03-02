@@ -437,7 +437,7 @@ sub EntryPage
     # creates the comment nav bar
     $p->{'comment_nav'} = CommentNav({
         'view_mode' => $flat_mode ? "flat" : $top_only_mode ? "top-only" : "threaded",
-        'url' => $entry->url( style_args => LJ::viewing_style_opts( %$get ) ),
+        'url' => $entry->url( style_opts => LJ::viewing_style_opts( %$get ) ),
         'current_page' => $copts->{'out_page'},
         'show_expand_all' => $show_expand_all,
     });
@@ -525,13 +525,9 @@ sub EntryPage_entry
             }
         }
 
-        my $host = $apache_r->headers_in->{Host};
-        my $args = scalar $apache_r->args;
-        my $querysep = $args ? "?" : "";
-        my $redir = "http://$host$uri$querysep$args";
         $opts->{internal_redir} = "/protected";
         $apache_r->notes->{journalid} = $entry->journalid;
-        $apache_r->notes->{returnto} = $redir;
+        $apache_r->notes->{returnto} = LJ::create_url( undef, keep_args => 1 );
         return;
     }
 

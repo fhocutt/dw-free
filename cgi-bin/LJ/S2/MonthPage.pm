@@ -34,7 +34,7 @@ sub MonthPage
     my $dbcr = LJ::get_cluster_reader($u);
 
     my $user = $u->user;
-    my $journalbase = $u->journal_base( $opts->{'vhost'} );
+    my $journalbase = $u->journal_base( vhost => $opts->{'vhost'} );
 
     if ($u->should_block_robots) {
         $p->{'head_content'} .= LJ::robot_meta_tags();
@@ -144,7 +144,7 @@ sub MonthPage
         'user' => $u->{'user'},
         'vhost' => $vhost,
         'type' => 'monthview',
-        'url' => "$LJ::SITEROOT/go.bml",
+        'url' => "$LJ::SITEROOT/go",
     };
     
     # figure out what months have been posted into

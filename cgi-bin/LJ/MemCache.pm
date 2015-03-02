@@ -38,6 +38,9 @@ our $GET_DISABLED = 0;
                           'userpic2' => [qw[2 picid fmt width height state pictime md5base64 comment description flags location url]],
                           'talk2row' => [qw[1 nodetype nodeid parenttalkid posterid datepost state]],
                           'usermsg' => [qw[1 journalid parent_msgid otherid timesent type]],
+                          'oauth_consumer' => [qw[1 consumer_id userid token secret name website createtime updatetime invalidatetime approved active]],
+                          'oauth_request' => [qw[1 consumer_id userid token secret createtime verifier callback]],
+                          'oauth_access' => [qw[1 consumer_id userid token secret createtime]],
                           );
 
 
@@ -78,7 +81,6 @@ sub client_stats {
 }
 
 sub reload_conf {
-    my $stat_callback;
     return $memc if eval { $memc->doesnt_want_configuration; };
 
     $memc->set_servers(\@LJ::MEMCACHE_SERVERS);
@@ -89,23 +91,8 @@ sub reload_conf {
     $memc->set_connect_timeout($LJ::MEMCACHE_CONNECT_TIMEOUT);
     $memc->set_cb_connect_fail($LJ::MEMCACHE_CB_CONNECT_FAIL);
 
-    if ($LJ::DB_LOG_HOST) {
-        $stat_callback = sub {
-            my ($stime, $etime, $host, $action) = @_;
-            LJ::blocking_report($host, 'memcache', $etime - $stime, "memcache: $action");
-        };
-    } else {
-        $stat_callback = undef;
-    }
-    $memc->set_stat_callback($stat_callback);
+    $memc->set_stat_callback(undef);
     $memc->set_readonly(1) if $ENV{LJ_MEMC_READONLY};
-
-    if (LJ::_using_blockwatch()) {
-        eval { LJ::Blockwatch->setup_memcache_hooks($memc) };
-
-        warn "Unable to add Blockwatch hooks to Cache::Memcached client object: $@"
-            if $@;
-    }
 
     return $memc;
 }

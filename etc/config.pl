@@ -45,7 +45,7 @@
     #$FRONTPAGE_JOURNAL = "news";
 
     # css proxy
-    $CSSPROXY = "http://cssproxy.$DOMAIN/";
+    $CSSPROXY = "//cssproxy.$DOMAIN/";
 
     # setup subdomains that work
     %SUBDOMAIN_FUNCTION = (
@@ -78,12 +78,6 @@
     ###
     ### System Information
     ###
-
-    # on a larger installation, it's useful to have multiple qbufferd.pl
-    # processes, one for each command type.  this is unecessary on a
-    # small installation.  you can also specify a delay between runs.
-    #@QBUFFERD_ISOLATE = ('ljcom_newpost');
-    #$QBUFFERD_DELAY   = 10;
 
     # path to sendmail and any necessary options
     $SENDMAIL = "/usr/sbin/sendmail -t";
@@ -143,7 +137,6 @@
     # CPU & database intensive or that you simply don't want to use
     %DISABLED = (
                  adult_content => 0,
-                 blockwatch => 1,
                  'community-logins' => 0,
                  captcha => 0,
                  directory => 0,
@@ -842,9 +835,6 @@
             safe_search_level => 11,
         },
     );
-
-    # enable contextual hover
-    $CTX_POPUP = 1;
 
     # page that 'noanon_ip' sysbanned users can access to get more information
     # on why they're banned

@@ -49,6 +49,7 @@ sub html_datetime
                                  defined $5 && $5 > 0 ? $5   : "",
                                  defined $6 && $6 > 0 ? $6   : "" );
     }
+
     $ret .= html_select( { name => "${name}_mm",
                            id => "${id}_mm",
                            selected => $mm,
@@ -221,7 +222,13 @@ sub _html_option {
     # is this individual option disabled?
     my $dis = $item->{disabled} ? " disabled='disabled' style='color: #999;'" : '';
 
-    return "<option value=\"$value\"$id$sel$dis>" .
+    # are there additional data-attributes?
+    my $data_attribute = '';
+    if ( $item->{data} ) {
+        $data_attribute .= " data-$_='$item->{data}->{$_}'" foreach keys %{$item->{data} || {}};
+    }
+
+    return "<option value=\"$value\"$id$sel$dis$data_attribute>" .
              ( $ehtml ? ehtml( $text ) : $text ) . "</option>\n";
 }
 

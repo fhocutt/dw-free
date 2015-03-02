@@ -7,7 +7,7 @@
 # Authors:
 #      Afuna <coder.dw@afunamatata.com>
 #
-# Copyright (c) 2010 by Dreamwidth Studios, LLC.
+# Copyright (c) 2010-2014 by Dreamwidth Studios, LLC.
 #
 # This program is free software; you may redistribute it and/or modify it under
 # the same terms as Perl itself. For a copy of the license, please reference
@@ -28,10 +28,8 @@ use DW::Shop;
 
 DW::Routing->register_string( "/rename/swap", \&swap_handler, app => 1 );
 
-# be lax in accepting what goes in the URL in case of typos or mis-copy/paste
-# we validate the token inside and return an appropriate message (instead of 404)
-# ideally, should be: /rename, or /rename/(20 character token)
-DW::Routing->register_regex( qr!^/rename(?:/([A-Z0-9]*))?$!i, \&rename_handler, app => 1 );
+# token is now passed as a get argument
+DW::Routing->register_string( "/rename/index", \&rename_handler, app => 1 );
 
 DW::Routing->register_string( "/admin/rename/index", \&rename_admin_handler, app => 1 );
 DW::Routing->register_string( "/admin/rename/edit", \&rename_admin_edit_handler, app => 1 );
@@ -45,7 +43,7 @@ DW::Controller::Admin->register_admin_page( '/',
 );
 
 sub rename_handler {
-    my ( $opts, $given_token ) = @_;
+    my ( $opts ) = @_;
 
     my $r = DW::Request->get;
 
@@ -58,9 +56,10 @@ sub rename_handler {
 
     my $vars = {};
 
-    my $token = DW::RenameToken->new( token => $given_token );
     my $post_args = DW::Request->get->post_args;
     my $get_args = DW::Request->get->get_args;
+    my $given_token = $get_args->{giventoken};
+    my $token = DW::RenameToken->new( token => $given_token );
 
     $get_args->{type} ||= "P";
     $get_args->{type} = "P" unless $get_args->{type} =~ m/^(P|C)$/;
@@ -87,7 +86,7 @@ sub rename_handler {
     }
 
     if ( $token ) {
-        if ( $token->applied ) {
+        if ( $token->applied || $token->revoked ) {
             $vars->{usedtoken} = $token->token;
         } else {
             $vars->{token} = $token;
@@ -111,8 +110,8 @@ sub rename_handler {
             $vars->{formdata} = {
                 authas      => $authas,
                 journaltype => $get_args->{type},
-                journalurl  => $get_args->{type} eq "P" ? $remote->journal_base : LJ::journal_base( "communityname", "community" ),
-                pageurl     => "/rename/" . $token->token,
+                journalurl  => $get_args->{type} eq "P" ? $remote->journal_base : LJ::journal_base( "communityname", vhost => "community" ),
+                pageurl     => "/rename?giventoken=" . $token->token,
                 token       => $token->token,
                 touser      => $post_args->{touser} || $get_args->{to} || "",
                 redirect    => $post_args->{redirect} || "disconnect",
@@ -124,7 +123,7 @@ sub rename_handler {
         }
     }
 
-    if ( ! $token || ( $token && $token->applied ) ) {
+    if ( ! $token || ( $token && $token->applied ) || ( $token && $token->revoked ) ) {
         # grab a list of tokens they can use in case they didn't provide a usable token
         # assume we always have a remote because our controller is registered as requiring a remote (default behavior)
         $vars->{unused_tokens} = DW::RenameToken->by_owner_unused( userid => $remote->userid );
@@ -160,7 +159,7 @@ sub handle_post {
         if ( $post_args->{redirect} ne "forward" ) {
             push @$errref, LJ::Lang::ml( '/rename.tt.error.emailnotforward', { emaildomain => "\@$LJ::USER_DOMAIN" } );
             $other_opts{email} = 0;
-        } 
+        }
 
         unless ( $journal->can_have_email_alias ) {
             push @$errref, LJ::Lang::ml( '/rename.tt.error.emailnoalias' );
@@ -404,7 +403,7 @@ sub siteadmin_rename_handler {
     if ( $r->method eq "POST" ) {
         my ( $post_ok, $rv ) = handle_siteadmin_rename_post( $post_args );
         return $rv if $post_ok;
-    
+
         $vars->{error_list} = $rv;
     }
 

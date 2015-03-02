@@ -70,6 +70,7 @@ propgroup colors_child {
 
 
 function print_stylesheet () {
+var string medium_media_query = generate_medium_media_query();
 
 var string page_font = generate_font_css($*font_base, $*font_fallback, $*font_base_size, $*font_base_units);
 var string page_title_font = generate_font_css($*font_journal_title, $*font_fallback, $*font_journal_title_size, $*font_journal_title_units);
@@ -168,13 +169,19 @@ img, img a {
 
 /*------------------------------------------ Sidebar --------------------------------------------*/
 
-.one-column #tertiary .module, .one-column #secondary .module, .two-columns #tertiary .module {
-    float:none !important;
+.any-column #tertiary .module, .any-column #secondary .module {
+    float:none;
     display:inline-block;
     width: $*sidebar_width;
     vertical-align: top;
     background: none;
+}
+@media $medium_media_query {
+    .multiple-columns #secondary .module, .three-columns #tertiary .module {
+        display: block;
+        width: auto;
     }
+}
 
 .module ul {
     list-style: none;

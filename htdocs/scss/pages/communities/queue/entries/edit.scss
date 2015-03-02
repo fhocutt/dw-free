@@ -1,8 +1,11 @@
-$include-html-classes: false;
-@import "foundation/settings", "foundation/components/global";
+@import "foundation/base";
 
 .approve-or-reject {
     margin-top: $base-line-height * 3em;
+
+    legend {
+        padding-right: .5em;
+    }
 
     textarea {
         height: $base-line-height * 5em;

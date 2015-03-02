@@ -19,7 +19,6 @@ propgroup presentation {
     property use use_journalstyle_entry_page;
     property use custom_control_strip_colors;
 
-
     property use reverse_sortorder_group;
     property use reg_firstdayofweek;
     property use tags_page_type;
@@ -244,6 +243,8 @@ propgroup customcss {
 }
 
 function Page::print_default_stylesheet () {
+    var string medium_media_query = generate_medium_media_query();
+    var string large_media_query = generate_large_media_query();
 
     var string page_colors = generate_color_css( $*color_page_text, $*color_page_background, new Color );
 
@@ -359,7 +360,6 @@ input, textarea {
 #primary {
     margin: 0 auto;
     padding: 0;
-    width: 60%;
     z-index: 0;
     }
 
@@ -368,13 +368,16 @@ input, textarea {
 #header {
     $header_colors
     margin: 0 auto 2em;
-    width: 60%;
     }
 
 #header>.inner {
     border-left: 20px solid $*color_header_footer_border;
     padding: 4em 2em;
     }
+
+@media $medium_media_query {
+    #primary, #header, #secondary, .page-top { width: 60%; }
+}
 
 #footer {
     clear: both;
@@ -385,7 +388,6 @@ input, textarea {
     margin: 0 auto;
     text-align: right;
     text-transform: uppercase;
-    width: 60%;
     }
 
 .navigation {
@@ -476,7 +478,6 @@ li.page-separator {
     $entry_colors
     margin: 0 auto;
     padding: 0;
-    width: 60%;
     z-index: 0;
     }
 
@@ -665,12 +666,31 @@ h3.entry-title a {
     text-transform: uppercase;
     }
 
+/* ensure comment content stretches out horizontally so it's readable */
+.comment-content:before {
+    content: "";
+    display: block;
+    overflow: hidden;
+    width: 10em;
+}
+.comment-content { border-top: 1px transparent solid; } /* for firefox */
+
 /* To prevent overlapping when icon's on the left */
 /* and list is the first thing in content */
 .entry-content li,
 .comment-content li {
     list-style-position: inside;
     }
+
+/* To constrain the width and prevent layout breaking */
+.entry-content img, .comment-content img {
+    max-width: 100%;
+    height: auto;
+}
+
+@media $large_media_query {
+    .entry-content img, .comment-content img { max-width: none; }
+}
 
 .metadata {
     margin: 2em 0 0;

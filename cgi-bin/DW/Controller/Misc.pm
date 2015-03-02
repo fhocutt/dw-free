@@ -26,12 +26,123 @@ use warnings;
 use DW::Controller;
 use DW::Routing;
 use DW::Template;
+use DW::FormErrors;
+use LJ::BetaFeatures;
 
+DW::Routing->register_string( '/misc/feedping', \&feedping_handler, app => 1 );
+DW::Routing->register_string( '/misc/get_domain_session', \&domain_session_handler, app => 1 );
 DW::Routing->register_string( '/misc/whereami', \&whereami_handler, app => 1 );
 DW::Routing->register_string( '/pubkey',        \&pubkey_handler,   app => 1 );
 DW::Routing->register_string( '/guidelines',    \&community_guidelines, user => 1 );
 DW::Routing->register_string( "/random/index", \&random_personal_handler, app => 1 );
 DW::Routing->register_string( "/community/random/index", \&random_community_handler, app => 1 );
+DW::Routing->register_string( "/beta", \&beta_handler, app => 1 );
+
+DW::Routing->register_static( '/internal/404', 'error/404.tt', app => 1 );
+
+sub beta_handler {
+    my ( $opts ) = @_;
+
+    my ( $ok, $rv ) = controller( form_auth => 1 );
+    return $rv unless $ok;
+
+    my $r = $rv->{r};
+    my $errors = DW::FormErrors->new;
+    if ( $r->did_post ) {
+        my $post = $r->post_args;
+
+        my $feature = $post->{feature};
+        $errors->add_string( "No feature defined." ) unless $feature;
+
+        my $u = LJ::load_user( $post->{user} );
+        $errors->add_string( "Invalid user." ) unless $u;
+
+        unless ( $errors->exist ) {
+            if ( $post->{on} ) {
+                LJ::BetaFeatures->add_to_beta( $u => $feature );
+            } else {
+                LJ::BetaFeatures->remove_from_beta( $u => $feature );
+            }
+        }
+    }
+
+    my $now = time();
+    my @current_features;
+    if ( keys %LJ::BETA_FEATURES ) {
+        my @all_features = sort { $LJ::BETA_FEATURES{$b}->{start_time} <=> $LJ::BETA_FEATURES{$a}->{start_time} } keys %LJ::BETA_FEATURES;
+        foreach my $feature ( @all_features ) {
+            my $feature_handler = LJ::BetaFeatures->get_handler( $feature );
+            push @current_features, $feature_handler
+                if $LJ::BETA_FEATURES{$feature}->{start_time} <= $now && $LJ::BETA_FEATURES{$feature}->{end_time} > $now
+                    && ! $feature_handler->is_sitewide_beta;
+        }
+    }
+
+    my $vars = {
+        remote => $rv->{remote},
+        features => \@current_features,
+        news_journal => LJ::load_user( $LJ::NEWS_JOURNAL ),
+        replace_ljuser_tag => sub { $_[0] =~ s/<\?ljuser (.+) ljuser\?>/LJ::ljuser($1)/mge; return $_[0] },
+    };
+    return DW::Template->render_template( 'beta.tt', $vars );
+}
+
+sub feedping_handler {
+    my ( $opts ) = @_;
+
+    my ( $ok, $rv ) = controller( anonymous => 1, form_auth => 0 );
+    return $rv unless $ok;
+
+    my $r = $rv->{r};
+    my $error_out = sub {
+       my ( $code, $message ) = @_;
+       $r->status( $code );
+       $r->print( $message );
+       return $r->OK;
+    };
+
+    my $out = sub {
+        my ( $message ) = @_;
+        $r->print( $message );
+        return $r->OK;
+    };
+
+    return $out->( "This is a REST-like interface for pinging $LJ::SITENAMESHORT feed crawler to re-fetch a syndication URL.  Do a POST to this URL with a 'feed' parameter equal to the URL.  Possible HTTP responses are 400 (bad request), 404 (we're not indexing that feed), or 204 (we'll get to it soon).  (also permitted are multiple feed parameters, if you're not sure we're indexing your Atom vs RSS, etc.  At most 3 are currently accepted.)" )
+            unless $r->did_post;
+
+
+    my $post = $r->post_args;
+    my $test_url = $post->{feed};
+    return $error_out->( $r->HTTP_BAD_REQUEST, "No 'feed' parameter with URL." )
+        unless $test_url;
+
+    my @feeds = $post->get_all( "feed" );
+    return $error_out->( $r->HTTP_BAD_REQUEST, "Too many 'feed' parameters." )
+        if @feeds > 3;
+
+    my $updated = 0;
+    my $dbh = LJ::get_db_writer();
+    foreach my $url ( @feeds ) {
+        $updated = 1 if
+            $dbh->do( "UPDATE syndicated SET checknext=NOW() WHERE synurl=?", undef, $url ) > 0;
+    }
+
+    return $out->( "Thanks! We'll get to it soon." )
+        if $updated;
+
+    return $error_out->( $r->NOT_FOUND, "Unknown feed(s)." );
+}
+
+sub domain_session_handler {
+    my ( $opts ) = @_;
+
+    my ( $ok, $rv ) = controller( anonymous => 1, form_auth => 0 );
+    return $rv unless $ok;
+
+    my $r = $rv->{r};
+    my $get = $r->get_args;
+    return $r->redirect( LJ::Session->helper_url( $get->{return} || "$LJ::SITEROOT/login" ) );
+}
 
 # handles the /misc/whereami page
 sub whereami_handler {

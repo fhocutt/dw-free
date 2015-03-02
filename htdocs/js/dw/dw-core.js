@@ -61,23 +61,44 @@ $.endpoint = function(action){
 $.fn.throbber = function(jqxhr) {
     var $this = $(this);
 
+    var marginLeft = "";
+    var extraPadding = "18px";
+    var top = "";
     if ( ! $this.data( "throbber" ) ) {
-        $this.css( "padding-right", "+=18px" );
+        if ( $this.is("input, button") ) {
+            extraPadding = "10px;"
+            marginLeft = "-24px";
+            top = ($this.height() / 2) + "px";
+        } else  {
+            extraPadding = "18px";
+            marginLeft = "-16px";
+        }
+
+        $this.css( "padding-right", "+=" + extraPadding );
     }
 
+
+    var $throbber = $("<span class='throbber'></span>").css({
+            "position": "absolute",
+            "display": "inline-block",
+            "marginLeft": marginLeft,
+            "width": "16px",
+            "height": "16px",
+            "top": top,
+            "background": "url('" + $.throbber.src + "') no-repeat"
+        });
     $this
-        .css( "background", "url('" + $.throbber.src + "') center right no-repeat" )
+        .after($throbber)
         .data("throbber", true);
 
-    jqxhr.then(function() {
-        $this.css( {
-            "paddingRight": "-=18px",
-            "backgroundImage": "none"
-        }).data("throbber", false);
-    });
 
-    jqxhr.fail(function() {
-        $this.css( "backgroundImage", "url('" + $.throbber.error + "')" );
+    jqxhr.then(function() {
+        $throbber.remove();
+        $this
+            .css( "padding-right", "-=" + extraPadding )
+            .data("throbber", false)
+    }, function() {
+        $throbber.css( "backgroundImage", "url('" + $.throbber.error + "')" );
     });
 
     return $this;

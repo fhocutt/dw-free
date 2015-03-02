@@ -44,6 +44,7 @@ set font_module_heading_size = "1.1";
 set font_module_heading_units = "em";
 
 function print_stylesheet () {
+    var string medium_media_query = generate_medium_media_query();
 
     var string header_colors = generate_color_css($*color_page_title, $*color_header_background, $*color_entry_border);
     var string entry_colors = generate_color_css($*color_entry_text, $*color_entry_background, $*color_entry_border);
@@ -114,28 +115,30 @@ body {
     padding: 0;
     }
 
-.column-left #primary > .inner:first-child {
-    padding-left: 1em;
-    }
-
-.column-right #primary > .inner:first-child {
-    padding-right: 1em;
-    }
-
 #secondary > .inner:first-child,
 #tertiary > .inner:first-child {
     padding: 0;
     }
 
-.three-columns-left #secondary > .inner:first-child,
-.three-columns-right #secondary > .inner:first-child {
-    padding-right: .5em;
-    }
+@media $medium_media_query {
+    .column-left #primary > .inner:first-child {
+        padding-left: 1em;
+        }
 
-.three-columns-left #tertiary > .inner:first-child,
-.three-columns-right #tertiary > .inner:first-child {
-    padding-left: .5em;
-    }
+    .column-right #primary > .inner:first-child {
+        padding-right: 1em;
+        }
+
+    .three-columns-left #secondary > .inner:first-child,
+    .three-columns-right #secondary > .inner:first-child {
+        padding-right: .5em;
+        }
+
+    .three-columns-left #tertiary > .inner:first-child,
+    .three-columns-right #tertiary > .inner:first-child {
+        padding-left: .5em;
+        }
+}
 
 a {
    text-decoration: none;

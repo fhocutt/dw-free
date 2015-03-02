@@ -69,6 +69,7 @@ no strict "vars";
     $JSPREFIX ||= "$SITEROOT/js";
     $USERPIC_ROOT ||= "$LJ::SITEROOT/userpic";
     $PALIMGROOT ||= "$LJ::SITEROOT/palimg";
+    $RELATIVE_SITEROOT ||= "//$DOMAIN_WEB";
 
     # path to sendmail and any necessary options
     $SENDMAIL ||= "/usr/sbin/sendmail -t -oi";
@@ -93,7 +94,7 @@ no strict "vars";
     # this option can be a boolean or a URL, but internally we want a URL
     # (which can also be a boolean)
     if ($LJ::OPENID_SERVER && $LJ::OPENID_SERVER == 1) {
-        $LJ::OPENID_SERVER = "$LJ::SITEROOT/openid/server";
+        $LJ::OPENID_SERVER = $LJ::USE_HTTPS_EVERYWHERE ? "$LJ::SSLROOT/openid/server" : "$LJ::SITEROOT/openid/server";
     }
 
     # set default capability limits if the site maintainer hasn't.
@@ -264,25 +265,14 @@ no strict "vars";
     my %ajaxmapping = (
                        delcomment     => "delcomment.bml",
                        talkscreen     => "talkscreen.bml",
-                       ctxpopup       => "tools/endpoints/ctxpopup.bml",
-                       changerelation => "tools/endpoints/changerelation.bml",
-                       userpicselect  => "tools/endpoints/getuserpics.bml",
-                       esn_inbox      => "tools/endpoints/esn_inbox.bml",
-                       esn_subs       => "tools/endpoints/esn_subs.bml",
-                       trans_save     => "tools/endpoints/trans_save.bml",
                        dirsearch      => "tools/endpoints/directorysearch.bml",
                        jobstatus      => "tools/endpoints/jobstatus.bml",
-                       widget         => "tools/endpoints/widget.bml",
                        multisearch    => "tools/endpoints/multisearch.bml",
-                       extacct_auth   => "tools/endpoints/extacct_auth.bml",
-                       contentfilters => "tools/endpoints/contentfilters.bml",
                        );
 
     foreach my $src (keys %ajaxmapping) {
         $LJ::AJAX_URI_MAP{$src} ||= $ajaxmapping{$src};
     }
-    $LJ::AJAX_URI_MAP{load_state_codes} = 'tools/endpoints/load_state_codes.bml';
-    $LJ::AJAX_URI_MAP{profileexpandcollapse} = 'tools/endpoints/profileexpandcollapse.bml';
 
     # List all countries that have states listed in 'codes' table in DB
     # These countries will be displayed with drop-down menu on Profile edit page
@@ -354,6 +344,15 @@ no strict "vars";
 
     # number of days to display virtual gifts on the profile - default to two weeks
     $VGIFT_EXPIRE_DAYS ||= 14;
+
+    # BML pages that should be forced to not use SSL
+    # this should be *temporary*
+    %SSL_DISABLED_URI = map { $_ => 1 } qw(
+        /preview/entry
+        /entry/preview
+        /latest
+        /edittags
+    );
 }
 
 

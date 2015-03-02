@@ -261,13 +261,6 @@ sub sysban_populate {
 }
 
 
-# here because it relates to sysbans ...
-sub tor_check {
-    return 0 unless $LJ::USE_TOR_CONFIGS && $LJ::TOR_CONFIG{$_[0]};
-    return DW::Request->get->note( 'via_tor_exit' ) ? 1 : 0;
-}
-
-
 sub _db_sysban_populate {
     my ($where, $what) = @_;
     my $dbh = LJ::get_db_writer();
@@ -571,6 +564,7 @@ sub validate {
                'pay_email' => 'email',
                'pay_uniq' => 'uniq',
                'support_user' => 'user',
+               'oauth_consumer' => 'user',
                'support_email' => 'email',
                'support_uniq' => 'uniq',
                'lostpassword' => 'user',
@@ -579,6 +573,7 @@ sub validate {
                'invite_email' => 'email',
                'noanon_ip' => 'ip',
                'spamreport' => 'user',
+               oauth_consumer => 'user',
                );
 
     while (my ($new, $existing) = splice(@map, 0, 2)) {

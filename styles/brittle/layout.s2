@@ -19,6 +19,8 @@ propgroup presentation {
     property use margins_size;
     property use margins_unit;
     property use sidebar_width;
+    property use medium_breakpoint_width;
+    property use large_breakpoint_width;
     property use custom_control_strip_colors;
 
     property use reverse_sortorder_group;
@@ -325,6 +327,8 @@ function prop_init() {
 }
 
 function Page::print_default_stylesheet() {
+    var string medium_media_query = generate_medium_media_query();
+    var string large_media_query = generate_large_media_query();
 
     var string sidebar_position = "";
     var string sidebar_position_opposite = "";
@@ -369,13 +373,18 @@ function Page::print_default_stylesheet() {
         .comment .userpic {
             float: $sidebar_position_opposite;
             text-align: $sidebar_position;
+            margin-$sidebar_position: 10px;
             }
-        .entry .userpic {
-            margin-$sidebar_position_opposite: -$entry_userpic_margin;
-            }
-        .comment .userpic {
-            margin-$sidebar_position_opposite: -$comment_userpic_margin;
-            }
+        @media $medium_media_query {
+            .entry .userpic {
+                margin-$sidebar_position_opposite: -$entry_userpic_margin;
+                margin-$sidebar_position: 0;
+                }
+            .comment .userpic {
+                margin-$sidebar_position_opposite: -$comment_userpic_margin;
+                margin-$sidebar_position: 0;
+                }
+        }
         """;
     }
     elseif ($*entryicons_position == "same") {
@@ -426,22 +435,16 @@ q { font-style: italic; }
 #canvas {
     margin: 0 auto;
     padding: 5% 0;
-    padding-$sidebar_position_opposite: 15%;
     text-align: justify;
     width: 85%;
 }
 
 #primary {
-    float: $sidebar_position_opposite;
-    width: 45%;
     text-align: justify;
     margin: 0;
-    margin-$sidebar_position: .6em;
     }
 
 #secondary {
-    float: $sidebar_position_opposite;
-    width: $*sidebar_width;
     margin: 1px 0 0 0;
     padding: 0 1em;
     font-size: 1em;
@@ -452,24 +455,39 @@ q { font-style: italic; }
     clear: both;
     color: $*color_entry_text;
     line-height: 125%;
-    margin-$sidebar_position: auto;
-    width: 45%;
     }
 
 #tertiary > .inner:first-child { }
 
 #tertiary .separator-after { clear: both; }
 
+@media $medium_media_query {
+    #canvas {
+        padding-$sidebar_position_opposite: 15%;
+    }
+
+    #primary {
+        float: $sidebar_position_opposite;
+        width: 45%;
+        margin-$sidebar_position: .6em;
+    }
+
+    #secondary {
+        float: $sidebar_position_opposite;
+        width: $*sidebar_width;
+    }
+
+    #tertiary {
+        margin-$sidebar_position: auto;
+        width: 45%;
+    }
+}
 
 /*--- header---*/
 #header {
-    margin-$sidebar_position: auto;
     text-transform: lowercase;
-    width: 45%;
 }
-.two-columns-left #header {
-    text-align: right;
-}
+
 #header {
   color: $*color_page_title;
 }
@@ -483,12 +501,10 @@ q { font-style: italic; }
 /*--- footer ---*/
 #footer {
     background: $*color_footer_background;
-    width: 45%;
     font-size: 0.7em;
     text-transform: lowercase;
     clear: both;
     margin-top: 10px;
-    margin-$sidebar_position: auto;
 }
 
 #footer a, #footer a:link, #footer a:active { color: $*color_footer_link; }
@@ -497,7 +513,16 @@ q { font-style: italic; }
 
 #footer .inner { padding: 10px; }
 
+@media $medium_media_query {
+    #header, #footer {
+        margin-$sidebar_position: auto;
+        width: 45%;
+    }
 
+    .two-columns-left #header {
+        text-align: right;
+    }
+}
 /*--- prev/next navigation ---*/
 
 li.page-back, li.page-forward {
@@ -538,6 +563,25 @@ li.page-separator { display: none; }
     }
 
 .entry-content { margin: 10px 0 0 0; }
+
+/* ensure comment content stretches out horizontally so it's readable */
+.comment-content:before {
+    content: "";
+    display: block;
+    overflow: hidden;
+    width: 10em;
+}
+.comment-content { border-top: 1px transparent solid; } /* for firefox */
+
+/* To constrain the width and prevent layout breaking */
+.entry-content img, .comment-content img {
+    max-width: 100%;
+    height: auto;
+}
+
+@media $large_media_query {
+    .entry-content img, .comment-content img { max-width: none; }
+}
 
 .entry .header {
     padding: 0;

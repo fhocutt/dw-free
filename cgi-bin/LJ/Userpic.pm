@@ -1077,7 +1077,7 @@ sub set_keywords {
     $sth->execute( $u->userid, $self->id );
 
     my %exist_kwids;
-    while (my ($kwid) = $sth->fetchrow_array) {
+    while ( my ($kwid) = $sth->fetchrow_array ) {
 
         # This is an edge case to catch keyword changes where the existing keyword
         # is in the pic#  format.  In this case kwid is NULL and we want to 
@@ -1132,9 +1132,9 @@ sub set_keywords {
 
     foreach my $kwid (keys %exist_kwids) {
         if ( $have_mapid ) {
-            $u->do("UPDATE userpicmap3 SET picid=NULL WHERE userid=? AND picid=? AND kwid=?", undef, $u->id, $self->id, $kwid);
+            $u->do( "UPDATE userpicmap3 SET picid=NULL WHERE userid=? AND picid=? AND kwid=?", undef, $u->id, $self->id, $kwid );
         } else {
-            $u->do("DELETE FROM userpicmap2 WHERE userid=? AND picid=? AND kwid=?", undef, $u->id, $self->id, $kwid);
+            $u->do( "DELETE FROM userpicmap2 WHERE userid=? AND picid=? AND kwid=?", undef, $u->id, $self->id, $kwid );
         }
     }
 
@@ -1239,27 +1239,56 @@ sub set_and_rename_keywords {
                 # redirect the old mapid to the new mapid
                 $u->do( "UPDATE userpicmap3 SET kwid = NULL, picid = NULL, redirect_mapid = ? WHERE mapid = ? AND userid = ?",
                         undef, $mapid, $oldid, $u->id );
-                die $u->errstr if $u->err;
+                if ( $u->err ) {
+                    warn $u->errstr;
+                    LJ::errobj("Userpic::RenameKeywords",
+                        origkw    => $origkw,
+                        newkw     => $newkw)->throw;
+                }
 
                 # change any redirects pointing to the old mapid to the new mapid
                 $u->do( "UPDATE userpicmap3 SET redirect_mapid = ? WHERE redirect_mapid = ? AND userid = ?",
                         undef, $mapid, $oldid, $u->id );
-                die $u->errstr if $u->err;
+                if ( $u->err ) {
+                    warn $u->errstr;
+                    LJ::errobj("Userpic::RenameKeywords",
+                        origkw    => $origkw,
+                        newkw     => $newkw)->throw;
+                }
 
                 # and set the new mapid to point to the picture
                 $u->do( "UPDATE userpicmap3 SET picid = ? WHERE mapid = ? AND userid = ?",
                         undef, $self->picid, $mapid, $u->id );
-                die $u->errstr if $u->err;
+                if ( $u->err ) {
+                    warn $u->errstr;
+                    LJ::errobj("Userpic::RenameKeywords",
+                        origkw    => $origkw,
+                        newkw     => $newkw)->throw;
+                }
 
             } else {
-                if ( $origkw !~ /^\s*pic\#\d+\s*$/ ) {
+                if ( $origkw !~ /^\s*pic\#(\d+)\s*$/ ) {
                     $u->do( "UPDATE userpicmap3 SET kwid = ? WHERE kwid = ? AND userid = ?",
                             undef, $u->get_keyword_id( $newkw ), $u->get_keyword_id( $origkw ), $u->id );
-                    die $u->errstr if $u->err;
-                } else {
-                    $u->do( "REPLACE INTO userpicmap3 (userid, kwid, picid) VALUES (?, ?, ?)",
-                            undef, $u->id, $u->get_keyword_id( $newkw ), $self->picid );
-                    die $u->errstr if $u->err;
+                    if ( $u->err ) {
+                        warn $u->errstr;
+                        LJ::errobj("Userpic::RenameKeywords",
+                            origkw    => $origkw,
+                            newkw     => $newkw)->throw;
+                    }
+                } else { # pic#xx
+                    my $picid = $1;
+
+                    # get (or create) the mapid for picxx
+                    my $mapid_for_picxx = $u->get_mapid_from_keyword( $origkw );
+                    $u->do( "UPDATE userpicmap3 SET kwid = ? WHERE kwid is NULL AND userid = ? AND picid = ?",
+                            undef, $u->get_keyword_id( $newkw ), $u->id, $picid );
+                    if ( $u->err ) {
+                        warn $u->errstr;
+                        LJ::errobj("Userpic::RenameKeywords",
+                            origkw    => $origkw,
+                            newkw     => $newkw)->throw;
+                    }
                 }
             }
         }

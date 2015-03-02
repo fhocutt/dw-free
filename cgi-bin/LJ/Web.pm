@@ -19,9 +19,6 @@ use strict;
 
 use lib "$LJ::HOME/cgi-bin";
 
-# load the bread crumb hash
-use LJ::Global::Crumbs;
-
 use Carp;
 use POSIX;
 use DW::External::Site;
@@ -210,8 +207,10 @@ sub make_authas_select {
         } else {
             $ret = $foundation
                 ?   q{<div class='row collapse'><div class='columns medium-1'><label class='inline'>} . LJ::Lang::ml( 'web.authas.select.label' ) . q{</label></div>}
-                        . q{<div class='columns medium-6'>} . $menu . q{</div>}
-                        . q{<div class='columns medium-2 end'>} . LJ::html_submit( undef, $button, { class => "secondary postfix button"} ) . q{</div>}
+                        . q{<div class='columns medium-11'><div class='row'>}
+                            . q{<div class='columns medium-4'>} . $menu . q{</div>}
+                            . q{<div class='columns medium-2 end'>} . LJ::html_submit( undef, $button, { class => "secondary button"} ) . q{</div>}
+                        . q{</div></div>}
                     . q{</div>}
                 : "<br/>"
                         . LJ::Lang::ml( 'web.authas.select', { menu => $menu, username => LJ::ljuser($authas) } ) . " " . LJ::html_submit( undef, $button )
@@ -686,64 +685,6 @@ sub make_cookie
     return @cookies;
 }
 
-sub set_active_crumb
-{
-    $LJ::ACTIVE_CRUMB = shift;
-    return undef;
-}
-
-sub set_dynamic_crumb
-{
-    my ($title, $parent) = @_;
-    $LJ::ACTIVE_CRUMB = [ $title, $parent ];
-}
-
-sub get_parent_crumb
-{
-    my $thiscrumb = LJ::get_crumb(LJ::get_active_crumb());
-    return LJ::get_crumb($thiscrumb->[2]);
-}
-
-sub get_active_crumb
-{
-    return $LJ::ACTIVE_CRUMB;
-}
-
-sub get_crumb_path
-{
-    my $cur = LJ::get_active_crumb();
-    my @list;
-    while ($cur) {
-        # get crumb, fix it up, and then put it on the list
-        if (ref $cur) {
-            # dynamic crumb
-            push @list, [ $cur->[0], '', $cur->[1], 'dynamic' ];
-            $cur = $cur->[1];
-        } else {
-            # just a regular crumb
-            my $crumb = LJ::get_crumb($cur);
-            last unless $crumb;
-            last if $cur eq $crumb->[2];
-            $crumb->[3] = $cur;
-            push @list, $crumb;
-
-            # now get the next one we're going after
-            $cur = $crumb->[2]; # parent of this crumb
-        }
-    }
-    return @list;
-}
-
-sub get_crumb
-{
-    my $crumbkey = shift;
-    if (defined $LJ::CRUMBS_LOCAL{$crumbkey}) {
-        return $LJ::CRUMBS_LOCAL{$crumbkey};
-    } else {
-        return $LJ::CRUMBS{$crumbkey};
-    }
-}
-
 # <LJFUNC>
 # name: LJ::check_referer
 # class: web
@@ -785,9 +726,9 @@ sub check_referer {
 
     return 1 if $LJ::SITEROOT   && $referer =~ m!^\Q$LJ::SITEROOT\E$uri!;
     return 1 if $LJ::SSLROOT    && $referer =~ m!^\Q$LJ::SSLROOT\E$uri!;
-    return 1 if $LJ::DOMAIN     && $referer =~ m!^http://\Q$LJ::DOMAIN\E$uri!;
-    return 1 if $LJ::DOMAIN_WEB && $referer =~ m!^http://\Q$LJ::DOMAIN_WEB\E$uri!;
-    return 1 if $LJ::USER_VHOSTS && $referer =~ m!^http://([A-Za-z0-9_\-]{1,25})\.\Q$LJ::DOMAIN\E$uri!;
+    return 1 if $LJ::DOMAIN     && $referer =~ m!^https?://\Q$LJ::DOMAIN\E$uri!;
+    return 1 if $LJ::DOMAIN_WEB && $referer =~ m!^https?://\Q$LJ::DOMAIN_WEB\E$uri!;
+    return 1 if $LJ::USER_VHOSTS && $referer =~ m!^https?://([A-Za-z0-9_\-]{1,25})\.\Q$LJ::DOMAIN\E$uri!;
     return 1 if $origuri =~ m!^https?://! && $origreferer eq $origuri;
     return undef;
 }
@@ -881,24 +822,23 @@ sub check_form_auth {
 # </LJFUNC>
 sub create_qr_div {
 
-    my ( $user, $ditemid, $style_opts, $userpic, $viewing_thread ) = @_;
-    my $u = LJ::want_user($user);
+    my ( $user, $ditemid, %opts ) = @_;
+    my $u = LJ::want_user( $user );
     my $remote = LJ::get_remote();
     return undef unless $u && $remote && $ditemid;
 
-    $style_opts ||= {};
-
-    my $qrhtml;
+    my $style_opts = $opts{style_opts} || {};
+    my $userpic_kw = $opts{userpic};
+    my $viewing_thread = $opts{thread};
 
     return undef if $remote->prop( "opt_no_quickreply" );
 
-    $qrhtml .= "<div id='qrformdiv'><form id='qrform' name='qrform' method='POST' action='$LJ::SITEROOT/talkpost_do'>";
-    $qrhtml .= LJ::form_auth();
+    my $e = LJ::Entry->new( $u, ditemid => $ditemid );
+    my $separator = %$style_opts ? "&" : "?";
+    my $basepath =  $e->url( style_opts => LJ::viewing_style_opts( %$style_opts ) ) . $separator;
 
-    my $stylemineuri = %$style_opts ? LJ::viewing_style_args( %$style_opts ) . "&" : "";
-    my $basepath =  $u->journal_base . "/$ditemid.html?${stylemineuri}";
     my $usertype = ($remote->openid_identity && $remote->is_validated) ? 'openid_cookie' : 'cookieuser';
-    $qrhtml .= LJ::html_hidden({'name' => 'replyto', 'id' => 'replyto', 'value' => ''},
+    my $hidden_form_elements .= LJ::html_hidden({'name' => 'replyto', 'id' => 'replyto', 'value' => ''},
                                {'name' => 'parenttalkid', 'id' => 'parenttalkid', 'value' => ''},
                                {'name' => 'journal', 'id' => 'journal', 'value' => $u->{'user'}},
                                {'name' => 'itemid', 'id' => 'itemid', 'value' => $ditemid},
@@ -910,7 +850,7 @@ sub create_qr_div {
                                {'name' => 'viewing_thread', 'id' => 'viewing_thread', 'value' => $viewing_thread},
                                );
     while ( my ( $key, $value ) = each %$style_opts ) {
-        $qrhtml .= LJ::html_hidden( { name => $key, id => $key, value => $value } );
+        $hidden_form_elements .= LJ::html_hidden( { name => $key, id => $key, value => $value } );
     }
 
     # rate limiting challenge
@@ -918,129 +858,66 @@ sub create_qr_div {
         my ($time, $secret) = LJ::get_secret();
         my $rchars = LJ::rand_chars(20);
         my $chal = $ditemid . "-$u->{userid}-$time-$rchars";
-        my $res = Digest::MD5::md5_hex($secret . $chal);
-        $qrhtml .= LJ::html_hidden("chrp1", "$chal-$res");
+        my $res = Digest::MD5::md5_hex( $secret . $chal );
+        $hidden_form_elements .= LJ::html_hidden( "chrp1", "$chal-$res" );
     }
 
-    # Start making the div itself
-    $qrhtml .= "<table>";
-    $qrhtml .= "<tr valign='center'>";
-    $qrhtml .= "<td align='right'><b>".BML::ml('/talkpost.bml.opt.from')."</b></td><td align='left'>";
-    $qrhtml .= LJ::ljuser($remote->{'user'});
-    $qrhtml .= "</td><td align='center'>";
-
+    my @pics;
     # Userpic selector
     {
         my %res;
-        LJ::do_request({ "mode" => "login",
-                         "ver" => ($LJ::UNICODE ? "1" : "0"),
-                         "user" => $remote->{'user'},
-                         "getpickws" => 1, },
-                       \%res, { "noauth" => 1, "userid" => $remote->{'userid'}}
+        LJ::do_request({ mode => "login",
+                         ver => ($LJ::UNICODE ? "1" : "0"),
+                         user => $remote->user,
+                         getpickws => 1,
+                         getpickwurls => 1,
+                         },
+                       \%res, { noauth => 1, userid => $remote->userid }
                        );
 
-        if ($res{'pickw_count'}) {
-            $qrhtml .= BML::ml('/talkpost.bml.label.picturetouse2',
-                               {
-                                   'aopts'=>"href='" . $remote->allpics_base . "'"});
-            my @pics;
-            for (my $i=1; $i<=$res{'pickw_count'}; $i++) {
-                push @pics, $res{"pickw_$i"};
+        if ( $res{pickw_count} ) {
+            for (my $i=1; $i<= $res{pickw_count}; $i++) {
+                push @pics, [ $res{"pickw_$i"}, $res{"pickwurl_$i"} ];
             }
-            @pics = sort { lc($a) cmp lc($b) } @pics;
-            $qrhtml .= LJ::html_select({'name' => 'prop_picture_keyword',
-                                        'selected' => $userpic, 'id' => 'prop_picture_keyword' },
-                                       ("", BML::ml('/talkpost.bml.opt.defpic'), map { ($_, $_) } @pics));
-
-            # userpic browse button
-            $qrhtml .= qq {<input type="button" id="lj_userpicselect" value="Browse" />} if $remote->can_use_userpic_select;
-
-            $qrhtml .= "<input type='button' id='randomicon' value='" . BML::ml('/talkpost.bml.userpic.random2') . "' />";
-
-            $qrhtml .= LJ::help_icon_html("userpics", " ");
+            @pics = sort { lc($a->[0]) cmp lc($b->[0]) } @pics;
+            @pics = ( { value => "", text => LJ::Lang::ml('/talkpost.bml.opt.defpic' ), data => { url => $res{defaultpicurl} } },
+                    map { { value => $_->[0], text => $_->[0], data => { url => $_->[1] } } } @pics );
         }
     }
 
-    $qrhtml .= "<span id='quotebuttonspan'></span></td></tr>";
+    return DW::Template->template_string( 'journal/quickreply.tt', {
+        form_url                => LJ::create_url( '/talkpost_do', host => $LJ::DOMAIN_WEB ),
+        hidden_form_elements    => $hidden_form_elements,
+        can_checkspell          => $LJ::SPELLER ? 1 : 0,
+        minimal                 => $opts{minimal} ? 1 : 0,
 
-    $qrhtml .= "<tr><td align='right'>";
-    $qrhtml .= "<b>".BML::ml('/talkpost.bml.opt.subject')."</b></td>";
-    $qrhtml .= "<td colspan='2' align='left'>";
-    $qrhtml .= "<input class='textbox' type='text' size='50' maxlength='100' name='subject' id='subject' value='' />";
-    $qrhtml .= "</td></tr>";
+        quote_button_js         => LJ::Talk::js_quote_button( 'body' ),
+        iconbrowser_js          => $remote->can_use_userpic_select ? LJ::Talk::js_iconbrowser_button() : "",
 
-    $qrhtml .= "<tr valign='top'>";
-    $qrhtml .= "<td align='right'><b>".BML::ml('/talkpost.bml.opt.message')."</b></td>";
-    $qrhtml .= "<td colspan='3' style='width: 90%'>";
+        current_icon_kw => $userpic_kw,
+        current_icon    => LJ::Userpic->new_from_keyword( $remote, $userpic_kw ),
 
-    $qrhtml .= "<textarea class='textbox' rows='10' cols='50' wrap='soft' name='body' id='body' style='width: 99%'></textarea>";
-    $qrhtml .= "</td></tr>";
+        remote => {
+            ljuser  => $remote->ljuser_display,
+            user    => $remote->user,
 
-    $qrhtml .= "<tr><td>&nbsp;</td>";
-    $qrhtml .= "<td colspan='3' align='left'>";
+            icons_url => $remote->allpics_base,
+            icons     => \@pics,
+            can_use_iconbrowser => $remote->can_use_userpic_select,
+        },
 
-    $qrhtml .= LJ::html_submit('submitpost', BML::ml('/talkread.bml.button.post'),
-                               { 'id' => 'submitpost',
-                               });
+        journal => {
+            is_iplogging => $u->opt_logcommentips eq 'A',
+            is_linkstripped => !$remote || ( $remote && $remote->is_identity && !$u->trusts_or_has_member( $remote ) ),
+        },
 
-    $qrhtml .="&nbsp;" . LJ::html_submit('submitpview', BML::ml('talk.btn.preview'),
-                               { 'id' => 'submitpview',
-                               });
+        help => {
+            icon => LJ::help_icon_html("userpics", " "),
+            iplogging => LJ::help_icon_html("iplogging", " "),
+        },
 
-    $qrhtml .= LJ::html_hidden('submitpreview', '0');
-
-    $qrhtml .= "&nbsp;" . LJ::html_submit('submitmoreopts', BML::ml('/talkread.bml.button.more'),
-                                          { 'id' => 'submitmoreopts',
-                                          });
-    if ($LJ::SPELLER) {
-        $qrhtml .= "&nbsp;<input type='checkbox' name='do_spellcheck' value='1' id='do_spellcheck' /> <label for='do_spellcheck'>";
-        $qrhtml .= BML::ml('/talkread.bml.qr.spellcheck');
-        $qrhtml .= "</label>";
-    }
-
-    if ($u->opt_logcommentips eq 'A') {
-        $qrhtml .= '<br />';
-        $qrhtml .= LJ::deemp(BML::ml('/talkpost.bml.logyourip'));
-        $qrhtml .= LJ::help_icon_html("iplogging", " ");
-    }
-    if ( !$remote || ( $remote && $remote->is_identity && !$u->trusts_or_has_member( $remote ) ) ) {
-        $qrhtml .= '<br />';
-        $qrhtml .= LJ::deemp( BML::ml( '/talkpost.bml.linkstripped' ) );
-    }
-
-    $qrhtml .= "</td></tr></table>";
-    $qrhtml .= "</form></div>";
-    $qrhtml = LJ::ejs( $qrhtml );
-
-    my $ret;
-    $ret = "<script language='JavaScript'>\n";
-
-
-    # here we create some separate fields for saving the quickreply entry
-    # because the browser will not save to a dynamically-created form.
-    my $qrsaveform = LJ::ejs(LJ::html_hidden(
-                                      {'name' => 'saved_subject', 'id' => 'saved_subject'},
-                                      {'name' => 'saved_body', 'id' => 'saved_body'},
-                                      {'name' => 'saved_spell', 'id' => 'saved_spell'},
-                                      {'name' => 'saved_upic', 'id' => 'saved_upic'},
-                                      {'name' => 'saved_dtid', 'id' => 'saved_dtid'},
-                                      {'name' => 'saved_ptid', 'id' => 'saved_ptid'},
-                                      ));
-
-    # FIXME: figure out how to fix the saving of the qr entry stuff
-    $ret .= qq{jQuery(function(jQ){
-            jQ("body").append(jQ("<div id='qrdiv'></div>").html("$qrhtml").hide());
-        });
-    };
-
-    # quick quote button
-    $ret .= LJ::Talk::js_quote_button( 'body' );
-
-    $ret .= "\n</script>";
-
-    $ret .= LJ::Talk::js_iconbrowser_button() if $remote->can_use_userpic_select;
-
-    return $ret;
+        ejs => sub { return LJ::ejs( @_ ) },
+    });
 }
 
 # <LJFUNC>
@@ -1245,7 +1122,7 @@ sub create_url {
     $path ||= $r->uri;
 
     # Default SSL if SSL is set and we are on the same host, unless we explicitly don't want it
-    $opts{ssl} = $LJ::IS_SSL unless $opts{host} || exists $opts{ssl};
+    $opts{ssl} //= $LJ::IS_SSL;
 
     my $proto = $opts{proto} // ( $opts{ssl} ? "https" : "http" );
     my $url = $proto . "://$host$path";
@@ -1416,7 +1293,7 @@ sub entry_form {
                     'name' => "prop_opt_backdated", "value" => 1,
                     'selected' => $opts->{'prop_opt_backdated'},
                     'tabindex' => $tabindex->() });
-            $out .= "<label for='prop_opt_backdated' class='right'>" . BML::ml('entryform.backdated3') . "</label>\n";
+            $out .= "<label for='prop_opt_backdated' class='right'>" . BML::ml('entryform.backdated4') . "</label>\n";
             $out .= LJ::help_icon_html("backdate", "", "") . "\n";
             $out .= "</span><!-- end #modifydate -->\n";
             $out .= "</p>\n";
@@ -2504,21 +2381,12 @@ sub res_includes {
 
     # use correct root and prefixes for SSL pages
     my ($siteroot, $imgprefix, $statprefix, $jsprefix, $wstatprefix, $iconprefix);
-    if ($LJ::IS_SSL) {
-        $siteroot = $LJ::SSLROOT;
-        $imgprefix = $LJ::SSLIMGPREFIX;
-        $statprefix = $LJ::SSLSTATPREFIX;
-        $jsprefix = $LJ::SSLJSPREFIX;
-        $wstatprefix = $LJ::SSLWSTATPREFIX;
-        $iconprefix = $LJ::USERPIC_ROOT;
-    } else {
-        $siteroot = $LJ::SITEROOT;
-        $imgprefix = $LJ::IMGPREFIX;
-        $statprefix = $LJ::STATPREFIX;
-        $jsprefix = $LJ::JSPREFIX;
-        $wstatprefix = $LJ::WSTATPREFIX;
-        $iconprefix = $LJ::USERPIC_ROOT;
-    }
+    $siteroot = $LJ::SITEROOT;
+    $imgprefix = $LJ::IMGPREFIX;
+    $statprefix = $LJ::STATPREFIX;
+    $jsprefix = $LJ::JSPREFIX;
+    $wstatprefix = $LJ::WSTATPREFIX;
+    $iconprefix = $LJ::USERPIC_ROOT;
 
     if ( $include_js ) {
         # find current journal
@@ -2771,6 +2639,7 @@ sub control_strip
     my $passed_in_location = $opts{host} && $opts{uri} ? 1 : 0;
     my $host = delete $opts{host} || $r->host;
     my $uri = delete $opts{uri} || $r->uri;
+    my $protocol = $LJ::IS_SSL ? "https" : "http";
 
     my $args;
     my $argshash = {};
@@ -2786,7 +2655,7 @@ sub control_strip
     my $view = delete $opts{view} || $r->note( 'view' );
     my $view_is = sub { defined $view && $view eq $_[0] };
 
-    my $baseuri = "http://$host$uri";
+    my $baseuri = "$protocol://$host$uri";
 
     $baseuri .= $args ? "?$args" : "";
     my $euri = LJ::eurl( $baseuri );
@@ -2816,19 +2685,19 @@ sub control_strip
 
         $links{settings} = "<a href='$LJ::SITEROOT/manage/settings'>$BML::ML{'web.controlstrip.links.settings'}</a>";
         $links{'view_friends_page'} = "<a href='" . $remote->journal_base . "/read'>$BML::ML{'web.controlstrip.links.viewreadingpage'}</a>";
-        $links{'add_friend'} = "<a href='$LJ::SITEROOT/manage/circle/add?user=$journal->{user}'>$BML::ML{'web.controlstrip.links.addtocircle'}</a>";
-        $links{'edit_friend'} = "<a href='$LJ::SITEROOT/manage/circle/add?user=$journal->{user}'>$BML::ML{'web.controlstrip.links.modifycircle'}</a>";
+        $links{'add_friend'} = "<a href='$LJ::SITEROOT/circle/$journal->{user}/edit'>$BML::ML{'web.controlstrip.links.addtocircle'}</a>";
+        $links{'edit_friend'} = "<a href='$LJ::SITEROOT/circle/$journal->{user}/edit'>$BML::ML{'web.controlstrip.links.modifycircle'}</a>";
         $links{'track_user'} = "<a href='$LJ::SITEROOT/manage/tracking/user?journal=$journal->{user}'>$BML::ML{'web.controlstrip.links.trackuser'}</a>";
         if ($journal->is_syndicated ) {
-            $links{'add_friend'} = "<a href='$LJ::SITEROOT/manage/circle/add?user=$journal->{user}&action=subscribe'>$BML::ML{'web.controlstrip.links.addfeed'}</a>";
-            $links{'remove_friend'} = "<a href='$LJ::SITEROOT/manage/circle/add?user=$journal->{user}&action=remove'>$BML::ML{'web.controlstrip.links.removefeed'}</a>";
+            $links{'add_friend'} = "<a href='$LJ::SITEROOT/circle/$journal->{user}/edit?action=subscribe'>$BML::ML{'web.controlstrip.links.addfeed'}</a>";
+            $links{'remove_friend'} = "<a href='$LJ::SITEROOT/circle/$journal->{user}/edit?action=remove'>$BML::ML{'web.controlstrip.links.removefeed'}</a>";
         }
         if ($journal->is_community) {
-            $links{'join_community'}   = "<a href='$LJ::SITEROOT/community/join?comm=$journal->{user}'>$BML::ML{'web.controlstrip.links.joincomm'}</a>"
+            $links{'join_community'}   = "<a href='$LJ::SITEROOT/circle/$journal->{user}/edit'>$BML::ML{'web.controlstrip.links.joincomm'}</a>"
                 unless $journal->is_closed_membership;
-            $links{'leave_community'}  = "<a href='$LJ::SITEROOT/community/leave?comm=$journal->{user}'>$BML::ML{'web.controlstrip.links.leavecomm'}</a>";
-            $links{'watch_community'}  = "<a href='$LJ::SITEROOT/manage/circle/add?user=$journal->{user}&action=subscribe'>$BML::ML{'web.controlstrip.links.watchcomm'}</a>";
-            $links{'unwatch_community'}   = "<a href='$LJ::SITEROOT/community/leave?comm=$journal->{user}'>$BML::ML{'web.controlstrip.links.removecomm'}</a>";
+            $links{'leave_community'}  = "<a href='$LJ::SITEROOT/circle/$journal->{user}/edit'>$BML::ML{'web.controlstrip.links.leavecomm'}</a>";
+            $links{'watch_community'}  = "<a href='$LJ::SITEROOT/circle/$journal->{user}/edit?action=subscribe'>$BML::ML{'web.controlstrip.links.watchcomm'}</a>";
+            $links{'unwatch_community'}   = "<a href='$LJ::SITEROOT/circle/$journal->{user}/edit'>$BML::ML{'web.controlstrip.links.removecomm'}</a>";
             $links{'post_to_community'}   = "<a href='$LJ::SITEROOT/update?usejournal=$journal->{user}'>$BML::ML{'web.controlstrip.links.postcomm'}</a>";
             $links{'edit_community_profile'} = "<a href='$LJ::SITEROOT/manage/profile/?authas=$journal->{user}'>$BML::ML{'web.controlstrip.links.editcommprofile'}</a>";
             $links{'edit_community_invites'} = "<a href='" . $journal->community_invite_members_url . "'>$BML::ML{'web.controlstrip.links.managecomminvites'}</a>";
@@ -3221,7 +3090,7 @@ jQuery(function(jQ){
     if (jQ("#lj_controlstrip").length == 0) {
         jQ.getJSON("/$user/__rpc_controlstrip?user=$user&host=$host&uri=$uri&args=$args&view=$view", {},
             function(data) {
-                jQ("<div></div>").html(data.control_strip).appendTo("body");
+                jQ("<div></div>").html(data.control_strip).prependTo("body");
             }
         );
     }
@@ -3249,9 +3118,6 @@ sub rte_js_vars {
         $ret .= "    RTEdisabled['$key'] = true;" if $rte_disabled->{$key};
     }
 
-    # detect whether image upload and photobucket are set up
-    my $photobucket_is_setup = $LJ::PHOTOBUCKET_JWIDGET_ID ? "true" : "false";
-
     $ret .= qq^
         var canmakepoll = $canmakepoll;
 
@@ -3262,9 +3128,6 @@ sub rte_js_vars {
                 }
             }
         }
-
-        var SiteConfig = new Object();
-        SiteConfig.ImagePhotobucket = $photobucket_is_setup;
     </script>^;
 
     return $ret;

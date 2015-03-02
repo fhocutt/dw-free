@@ -87,6 +87,11 @@ class string
     function builtin css_url_value : string
     "If the string contains a valid HTTP or HTTPS URL it is returned. Otherwise, an empty string is returned.";
 
+    function builtin css_multiply_length(int multiplier) : string
+    "If the string contains a valid CSS length value, returns the value multiplied by the multiplier with the unit appended. Otherwise, an empty string is returned";
+
+    function builtin css_divide_length(int divisor) : string
+    "If the string contains a valid CSS length value, returns the value divided by the divisor with the unit appended. Otherwise, an empty string is returned";
 }
 
 class Color
@@ -256,6 +261,8 @@ class CommentInfo
 
     function print
     "Print all comment related links";
+    function print(Entry e, string{} opts)
+    "Print all comment related links, with arguments";
     function print_readlink
     "Print the formatted link to the 'Read Comments' view";
     function print_postlink
@@ -336,6 +343,8 @@ class EntryLite
 
     var readonly Tag[] tags "Array of tags applied to this entry.";
 
+    var Tag tagnav "Which tag to apply to the intra-tag navigation links.";
+
     var Image userpic "The userpic selected to relate to this entry.";
 
     var readonly string{} metadata "Post metadata. Keys: 'music', 'mood', 'location', 'groups', 'xpost'.  Comment metadata.  Key: 'poster_ip'";
@@ -375,6 +384,11 @@ class EntryLite
     function print_poster () "Print the poster of the entry or comment (user or user in journal, etc)";
 
     function print_admin_post_icon () "prints the icon into the subject line";
+
+    function builtin print_reply_link(string{} opts) "Prints a link to reply to the comment. You may specify the link text in the 'linktext' option, and the link CSS class in 'class'. You may also specify the url of an image to use as a button in 'img_url'.";
+    function builtin print_reply_container() "Prints the area in which the quickreply box will go. If no container is available, quickreply will not work.";
+    function builtin print_reply_container(string{} opts) "Prints the area in which the quickreply box will go. You may 'class' which will be the CSS class used by the container. If no container is available, quickreply will not work.";
+
 }
 
 class Entry extends EntryLite
@@ -404,6 +418,8 @@ class Entry extends EntryLite
 
     function print_link_next() "Print the link to the next entry in this journal.";
     function print_link_prev() "Print the link to the previous entry in this journal.";
+    function print_link_tag_next() "Print the link to the next entry in this journal with this tag";
+    function print_link_tag_prev() "Print the link to the previous entry in this journal with this tag";
     function builtin viewer_sees_ebox() [fixed] : bool
     "True if opaque horizontal site-specific content boxes between entries should be displayed to the user.";
     function builtin print_ebox() [fixed]
@@ -450,12 +466,6 @@ class Comment extends EntryLite
     var readonly DateTime edittime_poster "The local time the comment was edited, in the commenter's timezone.  Or undef if anonymous comment, or commenter's timezone is unknown, or the comment hasn't been edited.";
 
     function builtin print_multiform_check "Prints the select checkbox in CSS class 'ljcomsel' with DOM id 'ljcomsel_\$talkid' for a multi-action form started with [method[EntryPage.print_multiform_start()]].";
-
-    function builtin print_reply_link(string{} opts) "Prints a link to reply to the comment. You may specify the link text in the 'linktext' option, and the link CSS class in 'class'. You may also specify the url of an image to use as a button in 'img_url'.";
-
-    function builtin print_reply_container() "Prints the area in which the quickreply box will go. If no container is available, quickreply will not work.";
-
-    function builtin print_reply_container(string{} opts) "Prints the area in which the quickreply box will go. You may 'class' which will be the CSS class used by the container. If no container is available, quickreply will not work.";
 
     function builtin expand_link () : string "Returns a link to expand a collapsed comment. Uses the value of the 'text_comment_expand' property as the text. Will not work in untrusted layers.";
     function builtin expand_link (string{} opts) : string "Returns a link to expand a collapsed comment. Can pass options 'text', 'title', 'class', and 'img_url' (and other 'img_*' options). Will not work in untrusted layers.";
@@ -610,10 +620,16 @@ class Page
     var readonly string customtext_url "URL for header of customtext module";
     var readonly string customtext_content "Content of customtext module";
 
+    var readonly bool include_meta_viewport
+    "Whether we should print the meta viewport tag or not, based on the viewer's preferences";
+
     function print
     "The main entry point that Dreamwidth calls. Layouts should override this to create HTML that's the
     same for all view types, and use \$this->title, \$this->head and \$this->body to include view-specific
     content into the template.";
+
+    function print_header
+    "Print information that should go in the page header such as page title and subtitle";
 
     function print_title "Print the title for this particular page, such as \"Friends' Recent Entries\" for the friends view,
     or a date for the day view. Should be overridden in i18n layers. Ideally, layout layers should never override
@@ -632,6 +648,12 @@ class Page
     function title : string
     "Return a relevant combination of [member[Page.global_title]] and [method[Page.view_title()]].  May be
     overridden in layout layers or left untouched for the core layer to handle.";
+
+    function print_module_jump_link()
+    "Print a link to jump to modules below the entries";
+
+    function print_meta_tags()
+    "Print meta tags. Needs to be within the first 512 bytes to work.";
 
     function print_wrapper_start() "Start the body wrapper for this page; includes default classes";
     function print_wrapper_start(string{} opts) "Start the body wrapper for this page; includes default classes and takes a hash using the key 'class'";
@@ -1186,6 +1208,22 @@ property builtin string PALIMGROOT {
 property string layout_type {
         des = "Layout Type";
         values = "|none|one-column|One column (modules at bottom)|one-column-split|One column split (modules at top & bottom)|two-columns-left|Two columns (sidebar on the left)|two-columns-right|Two columns (sidebar on the right)|three-columns-sides|Three columns (one sidebar on each Side)|three-columns-left|Three column (two sidebars on the left)|three-columns-right|Three column (two sidebars on the right)";
+}
+
+property string desktop_media_query {
+  des = "If we don't match this media query, we show only one column (mobile-friendly view); if we do match, we use the \$*layout_type defined by the user";
+  note = "OBSOLETE: use medium_breakpoint_width instead";
+}
+
+property string medium_breakpoint_width {
+  des = "The width at which the layout switches from single column mode (mobile view) to multiple columns if selected (tablet view).";
+  note = "Set this to 0 to use multiple columns regardless of screen size";
+  example = "30em";
+}
+property string large_breakpoint_width {
+  des = "The width at which the layout switches to larger screen mode (desktop view) and can afford some extra whitespace.";
+  note = "Set this to 0 to keep the layout the same regardless of screen size";
+  example = "40em";
 }
 
 property int num_items_recent {
@@ -3637,7 +3675,7 @@ function FriendsPage::print_stylesheets() {
 function generate_image_url ( string image_path ) : string
 "Take an image property and append style image directory path if not given absolute path"
 {
-    if ( $image_path != "" and not $image_path->starts_with("http://") ) {
+    if ( $image_path != "" and not ( $image_path->starts_with("http://") or $image_path->starts_with("https://") ) ) {
         $image_path = "$*STYLES_IMGDIR/$image_path";
     }
 
@@ -3724,6 +3762,49 @@ function generate_font_css(string font_specific, string font_base, string font_f
 
 function generate_font_css(string font_base, string font_fallback, string font_size, string font_unit) : string {
     return generate_font_css("", $font_base, $font_fallback, $font_size, $font_unit);
+}
+
+function generate_media_query(string user_breakpoint, int sidebar_width_multiplier, string default_min_width): string {
+    # use the user-provided breakpoint width
+    var string min_width = $user_breakpoint;
+
+    # no user-provided breakpoint width, base our min-width as a multiplier on the sidebar width
+    if ($min_width == "" and $*sidebar_width != "") {
+        # set the min width in ems
+        $min_width = $*sidebar_width->css_multiply_length($sidebar_width_multiplier);
+    }
+
+    # $*sidebar_width wasn't in a format we expected, fall back to a default
+    if ($min_width == "") {
+        $min_width = $default_min_width;
+    }
+
+    return "only screen and (min-width: $min_width)";
+}
+
+function generate_medium_media_query(): string {
+    return generate_media_query($*medium_breakpoint_width, 3, "40em");
+}
+
+function generate_large_media_query(): string {
+    return generate_media_query($*large_breakpoint_width, 4, "64em");
+}
+
+function Page::print_meta_tags() {
+    # they're using their own stylesheets which probably won't work with the initial scale
+    # (things will just look smooshed together)
+    if ($this.include_meta_viewport and $*include_default_stylesheet) {
+        print """<meta name="viewport" content="width=device-width, initial-scale=1.0"/>""";
+    }
+
+    print """<meta http-equiv="X-UA-Compatible" content="IE=edge" />""";
+}
+
+function Page::print_header()
+{
+    $this->print_global_title();
+    $this->print_global_subtitle();
+    $this->print_title();
 }
 
 function Page::print_title()
@@ -3843,6 +3924,15 @@ if ($.replyto isa Comment) {
 function Page::title() [notags] : string {
     return $this->view_title();
 }
+
+function Page::print_module_jump_link() {
+    if ($*layout_type == "one-column-split") {
+        """<div id="module-jump-link"><a href="#tertiary" title="Jump to modules below the entries">Modules</a></div>""";
+    } else {
+        """<div id="module-jump-link"><a href="#secondary" title="Jump to modules below the entries">Modules</a></div>""";
+    }
+}
+
 function Page::print_wrapper_start()
 "This function adds standard classes to the body of a page.  Pass extra options to it if necessary.  Overriding this function is NOT RECOMMENDED. Overriding this function could prevent sitewide improvements to styles, accessibility, or other functionality from operating in your layout."
 {
@@ -3864,6 +3954,7 @@ function Page::print_wrapper_start(string{} opts)
 
     var string column_count = "";
     var string column_side = "";
+    var string column_multiple = "";
 
     if ( $*layout_type->contains("split") ) { $column_count = "one-column"; }
     if ( $*layout_type->contains("two") ) { $column_count = "two-columns"; }
@@ -3873,12 +3964,15 @@ function Page::print_wrapper_start(string{} opts)
     if ( $*layout_type->contains("left") ) { $column_side = " column-left"; }
     if ( $*layout_type->contains("sides") ) { $column_side = " column-left column-right"; }
 
+    if ( $*layout_type->contains("one-column") ) { $column_multiple = "any-column"; }
+    else                                         { $column_multiple = "any-column multiple-columns"; }
+
     var string community_options = "";
     if ( $this.journal.journal_type == "C" ) {
          $community_options = "$member $admin $moderator";
     }
 
-    """<body class="page-$.view $column_count$column_side $*layout_type $opts{"class"} $logged_in $owner $subscribed $access $community_options $control_strip">\n""";
+    """<body class="page-$.view $column_count$column_side $column_multiple $*layout_type $opts{"class"} $logged_in $owner $subscribed $access $community_options $control_strip">\n""";
 }
 
 function Page::print_wrapper_end()
@@ -4232,9 +4326,19 @@ function print_module_poweredby() {
 
 function print_module_pagesummary_comment_count(Comment comment) : int {
     var int count = 0;
-    foreach var Comment c ( $comment.replies ) {
-        $count = $count + 1 + print_module_pagesummary_comment_count($c);
+    var Comment c;
+
+    # copy over to avoid munging the existing array for other callers
+    var Comment[] replies_stack = [];
+    push $replies_stack, $comment.replies;
+
+    while (size $replies_stack) {
+      $c = pop $replies_stack;
+      push $replies_stack, $c.replies;
+
+      $count = $count + 1;
     }
+
     return $count;
 }
 
@@ -4737,6 +4841,7 @@ function Page::print()
 "The meat of each new layout. Describes how each page will look. In nearly all cases, the logic and decision-making processes should come from pre-existing functions in core2, and should not get written here. If you limit the structure of the page to HTML, function calls, and attached CSS, then you will be able to pick up all of the enhancements  and accessibility requirements managed by core2."
 {
     """<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">\n<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">\n<head profile="http://www.w3.org/2006/03/hcard http://purl.org/uF/hAtom/0.1/ http://gmpg.org/xfn/11">\n""";
+    $this->print_meta_tags();
     $this->print_head();
     $this->print_stylesheets();
     $this->print_head_title();
@@ -4749,9 +4854,7 @@ function Page::print()
             <div id="header">
                 <div class="inner">
                     """;
-                    $this->print_global_title();
-                    $this->print_global_subtitle();
-                    $this->print_title();
+                    $this->print_header();
     """
                 </div><!-- end header>inner -->
             </div><!-- end header -->
@@ -4835,8 +4938,6 @@ function Page::print_time(string datefmt, string timefmt) {
             $timefmt = $*entry_time_format;
         }
 
-    } else {
-        $timefmt = "short";
     }
 
     var string ret;
@@ -4967,8 +5068,8 @@ function EntryPage::print_entry_footer(Entry e) {
 
 function Page::print_entry_footer(Entry e) {
     $e->print_management_links();
-        $e->print_interaction_links();
-
+    $e->print_interaction_links();
+    $e->print_reply_container({ "target" => $e.dom_id + "-reply" });
 }
 function RecentPage::print_sticky_entry(StickyEntry s)
 "function to print the sticky entry. can be overrised by styles to print it differently than other entries."
@@ -5198,10 +5299,25 @@ function Comment::print_metatypes() {
 
 function Entry::print_tags() [fixed] {
     if ($this.tags) {
+        var Page p = get_page();
+        var bool show_tagnav_links;
+        if ($p isa RecentPage) {
+            var RecentPage rp = $p as RecentPage;
+            $show_tagnav_links = ($rp.filter_active and $rp.filter_tags);
+        } else {
+            $show_tagnav_links = ($p.view == "entry" or $p.view == "reply");
+        }
         var int tag_count = 0;
-        """<div class="tag"><span class="tag-text">$*text_tags</span><ul>\n""";
+
+        var string dataAttributes = "";
+        if ( $show_tagnav_links ) {
+          $dataAttributes = """ data-journal="$this.journal.username" data-ditemid="$this.itemid" """;
+        }
+        """<div class="tag"><span class="tag-text"$dataAttributes>$*text_tags</span><ul>\n""";
+
         foreach var Tag t ($this.tags) {
-            """<li><a rel="tag" href="$t.url">$t.name</a>""";
+            "<li>";
+            """<a rel="tag" href="$t.url">$t.name</a>""";
             $tag_count++;
             if ($tag_count < size $.tags) { print $*text_tags_item_sep; }
             "</li>\n";
@@ -5326,6 +5442,14 @@ function Entry::print_link_prev() {
         " $link";
     }
 }
+function Entry::print_link_tag_next() {
+    var Link link = $this->get_link("nav_tag_next");
+    """<span class="tagnav"> <a href="$link.url">&rarr;</a></span>""";
+}
+function Entry::print_link_tag_prev() {
+    var Link link = $this->get_link("nav_tag_prev");
+    """<span class="tagnav"><a href="$link.url">&larr;</a> </span>""";
+}
 function Entry::print_management_links()
 "Prints entry management links, aka prev/edit/tag/memory/tag/next, with standarized CSS."
 {
@@ -5420,10 +5544,12 @@ function Entry::print_interaction_links(string target)
         if ($count > 0) {
             "</ul>";
         }
+    } elseif ($p.view == "read") {
+        $this.comments->print($this, { "linktext" => $*text_post_comment_friends, "target" => $this.dom_id + "-reply" });
     } else {
-            $this.comments->print();
-        }
+        $this.comments->print();
     }
+}
 
 ### RecentPage and related functions
 
@@ -5534,10 +5660,6 @@ function EntryLite::time_display(string datefmt, string timefmt) : string {
             $timefmt = $*entry_time_format;
         }
 
-    } else {
-        if ($timefmt != "none") {
-            $timefmt = "short";
-        }
     }
 
     var string ret;
@@ -5571,10 +5693,6 @@ function Entry::time_display(string datefmt, string timefmt) : string {
             $timefmt = $*entry_time_format;
         }
 
-    } else {
-        if ($timefmt != "none") {
-            $timefmt = "short";
-        }
     }
 
     var string ret;
@@ -5614,10 +5732,6 @@ function Comment::time_display (string datefmt, string timefmt, bool edittime) :
             $timefmt = $*comment_time_format;
         }
 
-    } else {
-        if ($timefmt != "none") {
-            $timefmt = "short";
-        }
     }
 
     var string tooltip = "";
@@ -6021,21 +6135,28 @@ function CommentInfo::print_postlink() {
         print safe "<a href=\"$.post_url\">"+($p.view == "read" or $p.view == "network" ? $*text_post_comment_friends : $*text_post_comment)+"</a>";
     }
 }
-function CommentInfo::print() {
-    var string display_type = ($*entry_interaction_links == "text") ? " text-links" : " icon-links";
-    """<ul class="entry-interaction-links$display_type">\n""";
-    """<li class="entry-permalink first-item"><a href="$.permalink_url">$*text_permalink</a></li>\n""";
-    if ($.show_readlink) {
-        """<li class="entry-readlink">""";
-        $this->print_readlink();
-        "</li>\n";
-    }
-    if ($.show_postlink and $.enabled) {
-        """<li class="entry-replylink">""";
+function CommentInfo::print(Entry e, string{} opts) {
+  var string display_type = ($*entry_interaction_links == "text") ? " text-links" : " icon-links";
+  """<ul class="entry-interaction-links$display_type" data-quickreply-target="$opts{"target"}">\n""";
+  """<li class="entry-permalink first-item"><a href="$.permalink_url">$*text_permalink</a></li>\n""";
+  if ($.show_readlink) {
+      """<li class="entry-readlink">""";
+      $this->print_readlink();
+      "</li>\n";
+  }
+  if ($.show_postlink and $.enabled) {
+      """<li class="entry-replylink">""";
+      if (isnull $e) {
         $this->print_postlink();
-        "</li>\n";
-    }
-    "</ul>";
+      } else {
+        $e->print_reply_link({ "linktext" => $opts{"linktext"}, "target" => $opts{"target"} });
+      }
+      "</li>\n";
+  }
+  "</ul>";
+}
+function CommentInfo::print() {
+  return $this->print(null Entry, { "" => "" });
 }
 
 
@@ -6113,7 +6234,39 @@ function EntryPage::print_comment_section(Entry e) {
 
 function EntryPage::print_comments (Comment[] cs) {
     if (size $cs == 0) { return; }
-    foreach var Comment c ($cs) {
+
+    # Browsers stop applying styles to nested elements after a certain depth
+    # Firefox stops at ~200
+    # Chrome stops at ~500
+    # So we stop nesting the .comment-thread element before we hit that point
+    var int MAX_NESTED_DEPTH = 180;
+
+    # Iterate over the comment tree structure
+    var int prev_depth = -1;
+    var int first_depth = -1;
+    var Comment c;
+    var Comment[] cs_stack = reverse $cs;
+    while (size $cs_stack) {
+        $c = pop $cs_stack;
+
+        push $cs_stack, reverse $c.replies;
+
+        # close some divs when not increasing depth
+        if ($c.depth < $MAX_NESTED_DEPTH and $prev_depth >= 0) {
+            for (var int i = $prev_depth; $i >= $c.depth; $i--) {
+                "</div>\n";
+            }
+        }
+
+        if ($c.depth < $MAX_NESTED_DEPTH) {
+            $prev_depth = $c.depth;
+        }
+
+        if ($first_depth < 0) {
+            $first_depth = $c.depth;
+        }
+
+        # actually print the comment
         var string parity = $c.depth % 2 ? "odd" : "even";
         var int indent = ($c.depth - 1) * 25;
         "<div class='comment-thread comment-depth-$parity comment-depth-$c.depth'>\n";
@@ -6128,8 +6281,17 @@ function EntryPage::print_comments (Comment[] cs) {
             $this->print_comment_partial($c);
         }
         "</div>";
-        $this->print_comments($c.replies);
-        "</div>";
+
+        if ($c.depth >= $MAX_NESTED_DEPTH) {
+            print "</div>";
+        }
+    }
+
+    if ($c.depth <= $MAX_NESTED_DEPTH) {
+        # close any remaining divs
+        for (var int i = $prev_depth; $i >= $first_depth; $i--) {
+            "</div>\n";
+        }
     }
 }
 

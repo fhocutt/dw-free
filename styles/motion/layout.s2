@@ -185,6 +185,7 @@ set module_navlinks_section = "one";
 # Add section for navlinks module
 function Page::print() {
     """<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">\n<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">\n<head profile="http://www.w3.org/2006/03/hcard http://purl.org/uF/hAtom/0.1/ http://gmpg.org/xfn/11">\n""";
+    $this->print_meta_tags();
     $this->print_head();
     $this->print_stylesheets();
     $this->print_head_title();
@@ -197,9 +198,7 @@ function Page::print() {
             <div id="header">
                 <div class="inner">
                     """;
-                    $this->print_global_title();
-                    $this->print_global_subtitle();
-                    $this->print_title();
+                    $this->print_header();
                     $this->print_module_section("header");
     """
                 </div><!-- end header>inner -->
@@ -267,6 +266,7 @@ function Page::print() {
 ##===============================
 
 function print_stylesheet() {
+    var string medium_media_query = generate_medium_media_query();
 
     var string entry_header_image = generate_background_css ($*image_entry_header_url, $*image_entry_header_repeat, $*image_entry_header_position, $*color_entry_title_background);
     var string module_header_image = generate_background_css ($*image_module_header_url, $*image_module_header_repeat, $*image_module_header_position, $*color_module_title_background);
@@ -323,6 +323,7 @@ h1, h2, h3, h4, h5, h6{font-size:1em}
 /************************************************
 * General elements *
 ************************************************/
+body {background-attachment: fixed;}
 
 #primary h1, #primary h2, #primary h3, #primary h4, #primary h5, #primary h6, #primary p, #primary li, #primary dt, #primary dd, #primary blockquote, #primary label, #primary th, #primary td, #primary a {text-shadow: 0 0 4px $*color_entry_text_shadow;}
 
@@ -634,12 +635,19 @@ $userpic_css
 /************************************************
 * All Modules *
 ************************************************/
-.one-column #secondary .module, .one-column #tertiary .module {display:inline-block; width: $*sidebar_width; vertical-align:top; margin: 0 1em 0 1em;}
+#secondary .module, #tertiary .module {display:inline-block; width: $*sidebar_width; vertical-align:top; margin: 0 1em 0 1em;}
+@media $medium_media_query {
+    .multiple-columns #secondary .module,
+    .multiple-columns #tertiary .module {
+        display: block;
+        width: auto;
+        margin: 0 0 1em 0;
+    }
+}
 
 .module {
     overflow:hidden;
     padding: .75em;
-    margin-bottom: 1em;
     line-height:1.4em;
     }
 
@@ -712,7 +720,9 @@ $userpic_css
 /************************************************
 * Page Footer *
 ************************************************/
-.two-columns #tertiary .module {margin: 0 .25em; min-height: 3em; }
+@media $medium_media_query {
+    .two-columns #tertiary .module {margin: 0 .25em; min-height: 3em; }
+}
 
 /************************************************
 * Reading Page *

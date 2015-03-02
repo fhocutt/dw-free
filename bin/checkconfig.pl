@@ -98,6 +98,9 @@ my %modules = (
                "Net::OpenID::Consumer" => {
                    opt => 'Required for OpenID consumer support.'
                },
+               "Net::OAuth" => {
+                   #opt => 'Required for OAuth support.' # FIXME: Not optional
+               },
                "URI::URL" => { 'deb' => 'liburi-perl' },
                "HTML::Tagset" => { 'deb' => 'libhtml-tagset-perl' },
                "HTML::Parser" => { 'deb' => 'libhtml-parser-perl', },
@@ -140,7 +143,6 @@ my %modules = (
                "IO::WrapTie" => { 'deb' => 'libio-stringy-perl' },
                "XML::Atom" => {
                    'deb' => 'libxml-atom-perl',
-                   'opt' => 'Required for Atom API support.',
                },
                "Math::BigInt::GMP" => {
                    'deb' => 'libmath-bigint-gmp-perl',
@@ -196,12 +198,12 @@ my %modules = (
                "GTop" => {},
                "Apache2::RequestRec"   => {
                    'deb' => "libapache2-mod-perl2",
-                   'opt' => "Required for modperl2",
+                   #'opt' => "Required for modperl2",   # FIXME: actually required
                    'system' => 1, # don't cpanm this
                },
                "Apache2::Request"      => {
                    'deb' => "libapache2-request-perl",
-                   'opt' => "Required for Apache2",
+                   #'opt' => "Required for Apache2",    # FIXME: actually required
                    'system' => 1, # don't cpanm this
                },
                "Test::More" => {
@@ -251,11 +253,8 @@ my %modules = (
                "Gearman::Client" => {
                    deb => 'libgearman-client-perl',
                },
-               "Net::PubSubHubbub::Publisher" => {},
-               "TheSchwartz::Worker::PubSubHubbubPublish" => {},
                "File::Type" => {
                    deb => 'libfile-type-perl',
-                   opt => 'For media storage',
                },
                "JSON" => {
                    deb => 'libjson-perl',
@@ -265,6 +264,12 @@ my %modules = (
                    deb => 'libimage-exiftool-perl',
                },
                "Net::SSL" => { ver => "2.85" },
+               "MIME::Base64::URLSafe" => {
+                   deb => 'libmime-base64-urlsafe-perl',
+               },
+               "List::MoreUtils" => {},
+               "Locale::Country" => { ver => '3.32' },
+               "Net::SMTPS" => {},
               );
 
 
@@ -287,7 +292,8 @@ sub check_modules {
             }
             if ($opt_cpanm) {
                 push @debs, $dt->{'deb'} if $dt->{'deb'} && $dt->{'system'};
-                push @mods, $mod;
+                push @mods, $mod unless $dt->{system};
+                die "Cannot use system module: $_" if $dt->{system} and ! $dt->{deb};
             } else {
                 push @debs, $dt->{'deb'} if $dt->{'deb'};
             }

@@ -14,6 +14,7 @@
 $_dark-olive-green:  #999966;
 $_very-dark-olive:   darken($_dark-olive-green, 10%);// try to match visual impact of the top bar
                                                      // which is $_dark-olive-green, but heavier to the eye
+$_bright-olive-green: #888833; // a little brighter than the dark olive green, to attract the eye
 $_light-olive-green: #ddddaa;
 
 $_white:             #fff;
@@ -26,7 +27,7 @@ $_off-black:         #222211;
 // color assignment
 $background-color:   $_white;
 $text-color:         $_off-black;
-$link-color:         $_dark-olive-green;
+$link-color:         $_bright-olive-green;
 
 $inactive-color:     $_dark-gray;
 
@@ -61,7 +62,6 @@ $header-font-color:                    lighten( $body-font-color, 5% );
 $list-side-margin:                     1em;
 
 // we want to base these on $body-font-color rather than the random variables they're based on
-$code-color:                            tint( $body-font-color, 20% );
 $blockquote-font-color:                 tint( $body-font-color, 20% );
 $small-font-color:                      $body-font-color;
 
@@ -72,7 +72,7 @@ $anchor-font-color-visited:            shade( $anchor-font-color, 30% );
 $anchor-font-color-hover:              lighten( $anchor-font-color, 30% );
 
 // forms
-$form-label-font-color:                 lighten($body-font-color, 20%);
+$form-label-font-color:                 $form-font-color;
 $input-font-color:                      $form-font-color;
 $input-bg-color:                        $form-bg-color;
 $input-focus-bg-color:                  darken($input-bg-color, 2%);
@@ -80,12 +80,16 @@ $input-border-color:                    darken($input-bg-color, 20%);
 $input-focus-border-color:              darken($input-bg-color, 40%);
 $input-disabled-bg:                     $form-border-color;
 $fieldset-border-color:                 $form-border-color;
-$legend-bg:                             $body-bg;
+$legend-bg:                             transparent;
 $input-prefix-bg:                       darken($input-bg-color, 5%);
 $input-prefix-border-color:             $input-border-color;
 
 // panel
 $panel-bg:                              darken( $body-bg, 5% );
+
+// reveal modal
+$reveal-modal-bg:                       $panel-bg;
+$reveal-border-color:                   $form-border-color;
 
 // sub-nav
 $sub-nav-font-color:	$inactive-color;
@@ -96,7 +100,7 @@ $pagination-link-unavailable-font-color:	$inactive-color;
 
 // tables
 $table-bg:              $form-bg-color;
-$table-even-row-bg:     $background-color;
+$table-even-row-bg:     $panel-bg;
 $table-border-color:    $border-color;
 $table-head-bg:         $primary-color;
 $table-head-font-color: $primary-text-color;
@@ -258,7 +262,7 @@ footer { border-top: 4px double $header-image-color;
     }
 
     #account-links {
-       left: $sidebar-width + 1em;
+       padding-left: $sidebar-width + 1em;
     }
 
     #header-userpic { text-align: center;
@@ -278,5 +282,6 @@ footer { border-top: 4px double $header-image-color;
     #content {
         margin-left: 1em;
         padding: 1px 1em 1em 1.5em;
+        max-width: $row-width + $sidebar-width + 2.5em; // desired content width + border width + padding
     }
 }

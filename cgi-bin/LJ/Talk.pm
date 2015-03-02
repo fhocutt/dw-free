@@ -303,12 +303,8 @@ sub check_viewable
         }
     }
 
-    my $host = $apache_r->headers_in->{Host};
-    my $args = scalar $apache_r->args;
-    my $querysep = $args ? "?" : "";
-    my $returnto = "http://" . $host . $apache_r->uri . $querysep . $args;
     $apache_r->notes->{internal_redir} = "/protected";
-    $apache_r->notes->{returnto} = $returnto;
+    $apache_r->notes->{returnto} = LJ::create_url( undef, keep_args => 1 );
     return 0;
 
 }
@@ -1910,7 +1906,7 @@ sub talkform {
     } # end edit check
 
     my $basesubject = $form->{subject} || "";
-    if ($opts->{replyto} && !$basesubject && $parpost->{'subject'}) {
+    if (!$editid && $opts->{replyto} && !$basesubject && $parpost->{'subject'}) {
         $basesubject = $parpost->{'subject'};
         $basesubject =~ s/^Re:\s*//i;
         $basesubject = "Re: $basesubject";
@@ -2987,7 +2983,8 @@ sub init {
     my $iprops = $item->{'props'};
     my $ditemid = $init->{'ditemid'}+0;
 
-    my $talkurl = $journalu->journal_base . "/$ditemid.html";
+    my $entry = LJ::Entry->new( $journalu, ditemid => $ditemid );
+    my $talkurl = $entry->url;
     $init->{talkurl} = $talkurl;
 
     ### load users
@@ -3529,6 +3526,9 @@ sub post_comment {
     # cluster tracking
     LJ::mark_user_active($comment->{u}, 'comment');
 
+    DW::Stats::increment( 'dw.action.comment.post', 1, [ "journal_type:" . $journalu->journaltype_readable,
+            "poster_type:" . ( ref $comment->{u} ? $comment->{u}->journaltype_readable : 'anonymous' ) ] );
+
     LJ::Hooks::run_hooks('new_comment', $journalu->{userid}, $item->{itemid}, $jtalkid);
 
     return 1;
@@ -3604,6 +3604,9 @@ sub edit_comment {
 
         $sclient->insert_jobs( @jobs );
     }
+
+    DW::Stats::increment( 'dw.action.comment.edit', 1, [ "journal_type:" . $journalu->journaltype_readable,
+            "poster_type:" . $pu ? $pu->journaltype_readable : 'anonymous' ] );
 
     LJ::Hooks::run_hooks('edit_comment', $journalu->{userid}, $item->{itemid}, $comment->{talkid});
 

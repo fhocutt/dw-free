@@ -89,6 +89,7 @@ set font_navlinks = "Georgia";
 
 
 function print_stylesheet () {
+    var string medium_media_query = generate_medium_media_query();
 
     var string entry_title_font = generate_font_css($*font_entry_title, $*font_base, $*font_fallback, $*font_entry_title_size, $*font_entry_title_units);
     var string entry_title_colors = generate_color_css($*color_entry_title, $*color_entry_title_background, new Color);
@@ -241,7 +242,7 @@ $userpic_css
 
 /* Comments */
 
-.comment { min-height: 138px; }
+.comment { min-height: 138px; $entry_colors border-radius: 2em; }
 
 .comment-pages { text-align:center;}
 
@@ -341,30 +342,41 @@ div.icons-container div.icon:nth-of-type(2n) {
 
 /* Sidebars and Modules */
 
-
-.two-columns-right .module, .three-columns-right .module, .three-columns-sides #tertiary .module, .one-column .module { margin: 0 0 1em 1em}
-.two-columns-left .module, .three-columns-left .module, .three-columns-sides #secondary .module { margin: 1em;}
-
 .module {
     padding: 1em;
+    margin: 0 0 1em 1em;
     border-radius: 2em;
 }
 
-.one-column .module {
+.any-column .module {
     display:inline-block;
     width:$*sidebar_width;
     vertical-align: top;
     text-align: left;
 }
 
-.one-column #secondary, .one-column #tertiary, .one-column .module-navlinks {text-align: center;}
+.any-column .module-userprofile { text-align: left; }
+#secondary, #tertiary, .any-column .module-navlinks {text-align: center;}
 
-.module-userprofile {text-align: center;}
+@media $medium_media_query {
+    .two-columns-left .module, .three-columns-left .module, .three-columns-sides #secondary .module { margin: 1em;}
+
+    .multiple-columns .module {
+        display: block;
+        width: auto;
+        vertical-align: baseline;
+    }
+
+    .multiple-columns #secondary, .multiple-columns #tertiary {
+        text-align: left;
+    }
+
+    .multiple-columns .module-userprofile { text-align: center; }
+}
 
 .module .userpic {display:inline-block; float: none;}
 
 .module-navlinks {
-    text-align: center;
     background: $*color_navlinks_link_background;
     padding: 2em 0;
 }

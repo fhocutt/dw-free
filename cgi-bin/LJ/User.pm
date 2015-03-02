@@ -54,7 +54,6 @@ use LJ::Community;
 use LJ::Subscription;
 use LJ::Identity;
 use LJ::Auth;
-use LJ::Jabber::Presence;
 use LJ::S2;
 use IO::Socket::INET;
 use Time::Local;
@@ -85,7 +84,6 @@ use LJ::Keywords;
 ###  14. Adult Content Functions
 ###  15. Email-Related Functions
 ###  16. (( there is no section 16 ))
-###  18. Jabber-Related Functions
 ###  19. OpenID and Identity Functions
 ###  21. Password Functions
 ###  22. Priv-Related Functions
@@ -154,6 +152,8 @@ sub create {
              undef, $userid);
 
     my $u = LJ::load_userid( $userid, "force" ) or return;
+    DW::Stats::increment( 'dw.action.account.create', 1,
+            [ 'journal_type:' . $u->journaltype_readable ] );
 
     my $status   = $opts{status}   || ($LJ::EVERYONE_VALID ? 'A' : 'N');
     my $name     = $opts{name}     || $username;
@@ -1337,16 +1337,6 @@ sub begin_work {
 }
 
 
-# front-end to LJ::cmd_buffer_add, which has terrible interface
-#   cmd: scalar
-#   args: hashref
-sub cmd_buffer_add {
-    my ($u, $cmd, $args) = @_;
-    $args ||= {};
-    return LJ::cmd_buffer_add( $u->clusterid, $u->userid, $cmd, $args );
-}
-
-
 sub commit {
     my $u = shift;
     return 1 unless $u->is_innodb;
@@ -2100,28 +2090,6 @@ sub can_show_location {
 }
 
 
-sub can_show_onlinestatus {
-    # FIXME: this function is unused as of Aug 2009 - kareila
-    my $u = shift;
-    my $remote = shift;
-    croak "invalid user object passed"
-        unless LJ::isu($u);
-
-    # Nobody can see online status of $u
-    return 0 if $u->opt_showonlinestatus eq 'N';
-
-    # Everybody can see online status of $u
-    return 1 if $u->opt_showonlinestatus eq 'Y';
-
-    # Only mutually trusted people of $u can see online status
-    if ($u->opt_showonlinestatus eq 'F') {
-        return 0 unless $remote;
-        return 1 if $u->mutually_trusts( $remote );
-        return 0;
-    }
-    return 0;
-}
-
 # The option to track all comments is available to:
 # -- community admins for any community they manage
 # -- all users if community's seed or premium paid
@@ -2349,6 +2317,10 @@ sub count_max_mod_queue_per_poster {
     return $_[0]->get_cap( 'mod_queue_per_poster' );
 }
 
+sub count_max_stickies {
+    return $_[0]->get_cap( 'stickies' );
+}
+
 sub count_max_subscriptions {
     return $_[0]->get_cap( 'subscriptions' );
 }
@@ -2528,6 +2500,12 @@ sub google_analytics {
 }
 
 
+# is there a suspend note?
+sub get_suspend_note {
+    my $u = $_[0];
+    return $u->prop( 'suspendmsg' );
+}
+
 # get/set post to community link visibility
 sub hide_join_post_link {
     my $u = $_[0];
@@ -2704,7 +2682,6 @@ sub migrate_prop_to_esn {
         }
         $u->set_prop( $prop_name, $migrated_value );
     }
-
 }
 
 # des: Given a list of caps to add and caps to remove, updates a user's caps.
@@ -2834,21 +2811,6 @@ sub opt_showlocation {
     } else {
         return 'F' if ($u->is_minor);
         return 'Y';
-    }
-}
-
-
-# opt_showonlinestatus options
-# F = Mutually Trusted
-# Y = Everybody
-# N = Nobody
-sub opt_showonlinestatus {
-    my $u = shift;
-
-    if ($u->raw_prop('opt_showonlinestatus') =~ /^(F|N|Y)$/) {
-        return $u->raw_prop('opt_showonlinestatus');
-    } else {
-        return 'F';
     }
 }
 
@@ -3236,60 +3198,106 @@ sub thread_expand_all {
     return 0;
 }
 
-#get/set Sticky Entry parent ID for settings menu
-sub sticky_entry {
-    my ( $u, $input ) = @_;
+# get/set Sticky Entry parent ID for settings menu
+# Expects an array of entry URLs or ditemids as input
+# If used as a setter, returns 1 or undef
+# Otherwise, returns an array of entry objects
+sub sticky_entries {
+    my ( $u, $input_ref ) = @_;
 
-    if ( defined $input ) {
-        unless ( $input ) {
+    # The user may have previously had an account type that allowed more stickes.
+    # we want to preserve a record of these additional stickes in case they once
+    # more upgrade their account.  This means we must first extract these
+    # if they exist.
+    my @entry_ids = $u->sticky_entry_ids;
+
+    my $max_sticky_count = $u->count_max_stickies;
+    my $entry_length = @entry_ids;
+
+    my @currently_unused_stickies = @entry_ids[$max_sticky_count..$entry_length];
+
+    # Check we've been sent input and it isn't empty.  If so we need to alter the sticky entries stored.
+    if ( defined $input_ref ) {
+        my @input = @$input_ref;
+
+        unless ( scalar @input ) {
             $u->set_prop( sticky_entry => '' );
             return 1;
         }
-        
-        my $ditemid;
-        my $slug;
 
-        # takes ditemid/ditemid from URL
-        if ( $input =~ m!/(\d+)\.html! ) {
-            $ditemid = $1;
-        } elsif ( $input =~ m!(\d+)! ) {
-            $ditemid = $1;
+        # sanity check the elements of the input array of candidate stickies.
+        my $new_sticky_count = 0;
+        foreach my $sticky_input ( @input ) {
+            $new_sticky_count++;
+
+            my $e = LJ::Entry->new_from_url_or_ditemid( LJ::trim( $sticky_input ), $u );
+            return undef unless $e && $e->valid;
         }
 
-        # takes slug from URL
-        $slug = $1
-            if $input =~ m!^(?:.+)/(?:\d\d\d\d/\d\d/\d\d)/([a-z0-9_-]+)\.html$!;
-
-        #checks that one of $slug and $ditemid exists
-        return 0 unless $ditemid || $slug;
-
-        # Validate the entry
-        my $item;
-
-        $item = LJ::Entry->new( $u, ditemid => $ditemid ) if $ditemid;
-
-        if ( $slug ) {
-            $item = LJ::Entry->new( $u, slug => $slug );
-            $ditemid = $item->ditemid;
+        # The user may have reused a sticky from before their account was downgraded.  To keep
+        # stickies unique we should remove this from the list of unused stickies.
+        my @new_unused_stickies;
+        # We create a hash from the input for quick membership checking.
+        my %sticky_hash = map { $_ =>  1 } @input;
+        foreach my $unused_sticky ( @currently_unused_stickies ) {
+            push @new_unused_stickies, $unused_sticky unless exists $sticky_hash{$unused_sticky};
         }
 
-        return 0 unless $item && $item->valid;
+        # This shouldn't happen but, just in case, we check the number of new stickies and
+        # if we have more than we're allowed we trim the input array accordingly.
+        @input = @input[0..$max_sticky_count-1] unless $new_sticky_count < $max_sticky_count;
 
-        $u->set_prop( sticky_entry => $ditemid );
+        # We add the currently_unused_stickies onto the end of the new stickies.
+        # This has the side effect that, if the user hasn't allocated all their
+        # sticky quota but has previously used more than their quota that some of their
+        # old stickies will "shuffle up" to fill in the space.
+        my $sticky_entry = join( ',', ( @input, @new_unused_stickies ) );
+        $u->set_prop( sticky_entry => $sticky_entry );
         return 1;
     }
-    return $u->prop( 'sticky_entry' );
+
+    my @entries = map { LJ::Entry->new( $u, ditemid => $_ ) } @entry_ids;
+    @entries = @entries[0..$max_sticky_count-1] if scalar @entries > $max_sticky_count;
+    return @entries;
 }
 
-sub get_sticky_entry {
-    my $u = shift;
-
-    if ( my $ditemid = $u->sticky_entry ) {
-        my $item = LJ::Entry->new( $u, ditemid => $ditemid );
-        return $item if $item->valid;
-    }
-    return undef;
+# returns a list of sticky entry ids
+sub sticky_entry_ids {
+    return split /,/, $_[0]->prop( 'sticky_entry' );
 }
+
+# returns a map of ditemid => 1 of the sticky entries
+sub sticky_entries_lookup {
+    return { map { $_ => 1 } $_[0]->sticky_entry_ids };
+}
+
+# Make a particular entry into a particular sticky.
+sub sticky_entry_new {
+    my ( $u, $ditemid ) = @_;
+
+    my @stickies = $u->sticky_entry_ids;
+    return undef if scalar @stickies >= $u->count_max_stickies;
+
+    unshift @stickies, $ditemid;
+    my $sticky_entry_list = join( ',', @stickies );
+
+    $u->set_prop( sticky_entry => $sticky_entry_list );
+
+    return 1;
+}
+
+# Remove a particular entry from the sticky list
+sub sticky_entry_remove {
+    my ( $u, $ditemid ) = @_;
+
+    my @new_stickies  = grep { $_ != $ditemid } $u->sticky_entry_ids;
+
+    my $sticky_entry = join( ',', @new_stickies );
+    $u->set_prop( sticky_entry => $sticky_entry );
+
+    return 1;
+}
+
 
 # should times be displayed in 24-hour time format?
 sub use_24hour_time { $_[0]->prop( 'timeformat_24' ) ? 1 : 0; }
@@ -3522,12 +3530,12 @@ sub new_from_url {
     }
 
     # user subdomains
-    if ($LJ::USER_DOMAIN && $url =~ m!^http://([\w-]+)\.\Q$LJ::USER_DOMAIN\E/?$!) {
+    if ($LJ::USER_DOMAIN && $url =~ m!^https?://([\w-]+)\.\Q$LJ::USER_DOMAIN\E/?$!) {
         return LJ::load_user($1);
     }
 
     # subdomains that hold a bunch of users (eg, users.siteroot.com/username/)
-    if ($url =~ m!^http://\w+\.\Q$LJ::USER_DOMAIN\E/([\w-]+)/?$!) {
+    if ($url =~ m!^https?://\w+\.\Q$LJ::USER_DOMAIN\E/([\w-]+)/?$!) {
         return LJ::load_user($1);
     }
 
@@ -4991,6 +4999,45 @@ sub entryform_width {
 }
 
 # getter/setter
+sub default_entryform_panels {
+    my ( %opts ) = @_;
+    my $anonymous = $opts{anonymous} ? 1 : 0;
+    my $force_show = $anonymous;
+
+    return {
+        order => $anonymous ?
+                [   [ "tags", "displaydate", "slug" ],
+                    [ "currents" ],
+                    [ "comments", "age_restriction" ],
+                ] :
+                [   [ "tags", "displaydate", "slug" ],
+
+                    # FIXME: should be [ "status" ... ] %]
+                    [ "currents", "comments", "age_restriction" ],
+
+                    # FIXME: should be [ ... "scheduled" ]
+                    [ "icons", "crosspost", "sticky" ],
+                ],
+        show => {
+            "tags"          => 1,
+            "currents"      => 1,
+            "slug"          => 1,
+            "displaydate"   => $force_show,
+            "comments"      => $force_show,
+            "age_restriction" => $force_show,
+            "icons"         => 1,
+
+            "crosspost"     => $force_show,
+            #"scheduled"     => $force_show,
+
+            "sticky"        => 1,
+
+            #"status"        => 1,
+        },
+        collapsed => {
+        }
+    };
+}
 sub entryform_panels {
     my ( $u, $val ) = @_;
 
@@ -5000,33 +5047,12 @@ sub entryform_panels {
     }
 
     my $prop = $u->prop( "entryform_panels" );
-    my $default = {
-        order => [ [ "tags", "displaydate", "slug" ],
-
-                   # FIXME: should be [ "status"  "journal" "comments" "age_restriction" ] %]
-                   [ "access", "journal", "currents", "comments", "age_restriction" ],
-
-                   # FIXME: should be [ "icons" "crosspost" "scheduled" ]
-                   [ "icons", "crosspost", "flags" ],
-                ],
-        show => {
-            "tags"          => 1,
-            "currents"      => 1,
-            "slug"          => 1,
-            "displaydate"   => 0,
-            "access"        => 1,
-            "journal"       => 1,
-            "comments"      => 0,
-            "age_restriction" => 0,
-            "icons"         => 1,
-            "crosspost"     => 0,
-            "flags"     => 1,
-            #"scheduled"     => 0,
-            #"status"        => 1,
-        },
-        collapsed => {
-        }
-    };
+    my $default = LJ::User::default_entryform_panels();
+    my %obsolete = (
+        access => 1,
+        journal => 1,
+        flags => 1,
+    );
 
     my %need_panels = map { $_ => 1 } keys %{$default->{show}};
 
@@ -5034,8 +5060,24 @@ sub entryform_panels {
     $ret = Storable::thaw( $prop ) if $prop;
 
     if ( $ret ) {
-        # fill in any modules that somehow are not in this list
+        # remove any obsolete panels from "show" and "collapse"
+        foreach my $panel ( keys %obsolete ) {
+            delete $ret->{show}->{$panel};
+            delete $ret->{collapsed}->{$panel};
+        }
+
         foreach my $column ( @{$ret->{order}} ) {
+            # remove any obsolete panels from "order"
+            my @col = @{$column};
+            my @del_indexes = grep { $obsolete{$col[$_]} } 0..$#col;
+            if ( @del_indexes ) {
+                foreach my $del ( reverse @del_indexes ) {
+                    splice @col, $del, 1;
+                }
+            }
+            $column = \@col;
+
+            # fill in any modules that somehow are not in this list
             foreach my $panel ( @{$column} ) {
                 delete $need_panels{$panel};
             }
@@ -5383,118 +5425,6 @@ sub third_party_notify_list_remove {
                       )
                  );
     return 1;
-}
-
-
-########################################################################
-###  18. Jabber-Related Functions
-
-=head2 Jabber-Related Functions
-=cut
-
-# Hide the LJ Talk field on profile?  opt_showljtalk needs a value of 'N'.
-sub hide_ljtalk {
-    my $u = shift;
-    croak "Invalid user object passed" unless LJ::isu($u);
-
-    # ... The opposite of showing the field. :)
-    return $u->show_ljtalk ? 0 : 1;
-}
-
-
-# returns whether or not the user is online on jabber
-sub jabber_is_online {
-    # FIXME: this function is unused as of Aug 2009 - kareila
-    my $u = shift;
-
-    return keys %{LJ::Jabber::Presence->get_resources($u)} ? 1 : 0;
-}
-
-
-sub ljtalk_id {
-    my $u = shift;
-    croak "Invalid user object passed" unless LJ::isu($u);
-
-    return $u->site_email_alias;
-}
-
-
-# opt_showljtalk options based on user setting
-# Y = Show the LJ Talk field on profile (default)
-# N = Don't show the LJ Talk field on profile
-sub opt_showljtalk {
-    my $u = shift;
-
-    # Check for valid value, or just return default of 'Y'.
-    if ($u->raw_prop('opt_showljtalk') =~ /^(Y|N)$/) {
-        return $u->raw_prop('opt_showljtalk');
-    } else {
-        return 'Y';
-    }
-}
-
-
-# find what servers a user is logged in to, and send them an IM
-# returns true if sent, false if failure or user not logged on
-# Please do not call from web context
-sub send_im {
-    my ($self, %opts) = @_;
-
-    croak "Can't call in web context" if LJ::is_web_context();
-
-    my $from = delete $opts{from};
-    my $msg  = delete $opts{message} or croak "No message specified";
-
-    croak "No from or bot jid defined" unless $from || $LJ::JABBER_BOT_JID;
-
-    my @resources = keys %{LJ::Jabber::Presence->get_resources($self)} or return 0;
-
-    my $res = $resources[0] or return 0; # FIXME: pick correct server based on priority?
-    my $pres = LJ::Jabber::Presence->new($self, $res) or return 0;
-    my $ip = $LJ::JABBER_SERVER_IP || '127.0.0.1';
-
-    my $sock = IO::Socket::INET->new(PeerAddr => "${ip}:5200")
-        or return 0;
-
-    my $vhost = $LJ::DOMAIN;
-
-    my $to_jid   = $self->user   . '@' . $LJ::DOMAIN;
-    my $from_jid = $from ? $from->user . '@' . $LJ::DOMAIN : $LJ::JABBER_BOT_JID;
-
-    my $emsg = LJ::exml($msg);
-    my $stanza = LJ::eurl(qq{<message to="$to_jid" from="$from_jid"><body>$emsg</body></message>});
-
-    print $sock "send_stanza $vhost $to_jid $stanza\n";
-
-    my $start_time = time();
-
-    while (1) {
-        my $rin = '';
-        vec($rin, fileno($sock), 1) = 1;
-        select(my $rout=$rin, undef, undef, 1);
-        if (vec($rout, fileno($sock), 1)) {
-            my $ln = <$sock>;
-            return 1 if $ln =~ /^OK/;
-        }
-
-        last if time() > $start_time + 5;
-    }
-
-    return 0;
-}
-
-
-# Show LJ Talk field on profile?  opt_showljtalk needs a value of 'Y'.
-sub show_ljtalk {
-    my $u = shift;
-    croak "Invalid user object passed" unless LJ::isu($u);
-
-    # Fail if the user wants to hide the LJ Talk field on their profile,
-    # or doesn't even have the ability to show it.
-    return 0 unless $u->opt_showljtalk eq 'Y' && LJ::is_enabled('ljtalk') && $u->is_person;
-
-    # User either decided to show LJ Talk field or has left it at the default.
-    return 1 if $u->opt_showljtalk eq 'Y';
 }
 
 
@@ -5962,19 +5892,19 @@ sub display_journal_deleted {
                  $relationship_ml = 'web.controlstrip.status.memberwatcher';
                  @relationship_links = (
                      { ml => 'web.controlstrip.links.leavecomm',
-                       url => "$LJ::SITEROOT/community/leave?comm=$u->{user}"
+                       url => "$LJ::SITEROOT/circle/$u->{user}/edit"
                      } );
              } elsif ( $watching ) {
                  $relationship_ml = 'web.controlstrip.status.watcher';
                  @relationship_links = (
                      { ml => 'web.controlstrip.links.removecomm',
-                       url => "$LJ::SITEROOT/community/leave?comm=$u->{user}"
+                       url => "$LJ::SITEROOT/circle/$u->{user}/edit"
                      } );
              } elsif ( $memberof ) {
                  $relationship_ml = 'web.controlstrip.status.member';
                  @relationship_links = (
                      { ml => 'web.controlstrip.links.leavecomm',
-                       url => "$LJ::SITEROOT/community/leave?comm=$u->{user}"
+                       url => "$LJ::SITEROOT/circle/$u->{user}/edit"
                      } );
              }
         }
@@ -5989,19 +5919,19 @@ sub display_journal_deleted {
                 $relationship_ml = 'web.controlstrip.status.trust_watch';
                 @relationship_links = (
                     { ml => 'web.controlstrip.links.modifycircle',
-                      url => "$LJ::SITEROOT/manage/circle/add?user=$u->{user}"
+                      url => "$LJ::SITEROOT/circle/$u->{user}/edit"
                     } );
             } elsif ( $trusts ) {
                 $relationship_ml = 'web.controlstrip.status.trusted';
                 @relationship_links = (
                     { ml => 'web.controlstrip.links.modifycircle',
-                      url => "$LJ::SITEROOT/manage/circle/add?user=$u->{user}"
+                      url => "$LJ::SITEROOT/circle/$u->{user}/edit"
                     } );
             } elsif ( $watches ) {
                 $relationship_ml = 'web.controlstrip.status.watched';
                 @relationship_links = (
                     { ml => 'web.controlstrip.links.modifycircle',
-                      url => "$LJ::SITEROOT/manage/circle/add?user=$u->{user}"
+                      url => "$LJ::SITEROOT/circle/$u->{user}/edit"
                     } );
             }
         }
@@ -6090,8 +6020,10 @@ sub journal_base {
 
 
 sub meta_discovery_links {
-    my ( $u, %opts ) = @_;
+    my $u = shift;
     my $journalbase = $u->journal_base;
+
+    my %opts = ref $_[0] ? %{$_[0]} : @_;
 
     my $ret = "";
 
@@ -7401,7 +7333,7 @@ Returns the number of userpics the user can upload (base account type cap + bonu
 sub userpic_quota {
     my $u = shift or return undef;
     my $ct = $u->get_cap( 'userpics' );
-    $ct += $u->prop('bonus_icons') // 0
+    $ct += $u->prop('bonus_icons') || 0
         if $u->is_paid; # paid accounts get bonus icons
     return min( $ct, $LJ::USERPIC_MAXIMUM );
 }
@@ -7669,7 +7601,7 @@ sub load_user_or_identity {
     return undef unless $arg =~ /\./;
 
     my $url = lc($arg);
-    $url = "http://$url" unless $url =~ m!^http://!;
+    $url = "http://$url" unless $url =~ m!^https?://!;
     $url .= "/" unless $url =~ m!/$!;
 
     # get from memcache
@@ -7969,7 +7901,14 @@ sub get_effective_remote {
     my $remote = LJ::get_remote();
     return undef unless $remote;
 
-    my $authas = $BMLCodeBlock::GET{authas} || $BMLCodeBlock::POST{authas} || $remote->user;
+    my $authas = $BMLCodeBlock::GET{authas} || $BMLCodeBlock::POST{authas};
+
+    unless ( $authas ) {
+        my $r = DW::Request->get;
+        $authas = $r->get_args->{authas} || $r->post_args->{authas};
+    }
+
+    $authas ||= $remote->user;
     return $remote if $authas eq $remote->user;
 
     return LJ::get_authas_user($authas);
@@ -8233,7 +8172,8 @@ sub wipe_major_memcache
     foreach my $key ("userid","bio","talk2ct","talkleftct","log2ct",
                      "log2lt","memkwid","dayct2","s1overr","s1uc","fgrp",
                      "wt_edges","wt_edges_rev","tu","upicinf","upiccom",
-                     "upicurl", "upicdes", "intids", "memct", "lastcomm")
+                     "upicurl", "upicdes", "intids", "memct", "lastcomm",
+                     "user_oauth_consumer","user_oauth_access")
     {
         LJ::memcache_kill($userid, $key);
     }
@@ -8687,6 +8627,18 @@ sub statushistory_add {
 =head2 Email-Related Functions (LJ)
 =cut
 
+# loads the valid tlds as a hashref
+sub load_valid_tlds {
+    return $LJ::VALID_EMAIL_DOMAINS
+        if $LJ::VALID_EMAIL_DOMAINS;
+
+    my %domains = map { lc $_ => 1 }
+                    grep { $_ && $_ !~ /^#/ }
+                    split( /\r?\n/, LJ::load_include( 'tlds' ) );
+
+    return $LJ::VALID_EMAIL_DOMAINS = \%domains;
+}
+
 # <LJFUNC>
 # name: LJ::check_email
 # des: checks for and rejects bogus e-mail addresses.
@@ -8699,7 +8651,9 @@ sub statushistory_add {
 # </LJFUNC>
 sub check_email
 {
-    my ($email, $errors) = @_;
+    my ($email, $errors, %opts) = @_;
+
+    my $use_errcode = $opts{errcode};
 
     # Trim off whitespace and force to lowercase.
     $email =~ s/^\s+//;
@@ -8713,7 +8667,7 @@ sub check_email
         #       to either return error codes, or let caller supply
         #       a subref to resolve error codes into native language
         #       error messages (probably via BML::ML hash, or something)
-        push @$errors, $errmsg;
+        push @$errors, $use_errcode ? $errcode : $errmsg;
         return;
     };
 
@@ -8740,7 +8694,8 @@ sub check_email
     }
 
     # Check the domain name.
-    unless ($domain =~ /^[\w-]+(\.[\w-]+)*\.(ac|ad|ae|aero|af|ag|ai|al|am|an|ao|aq|ar|arpa|as|at|au|aw|az|ba|bb|bd|be|bf|bg|bh|bi|biz|bj|bm|bn|bo|br|bs|bt|bv|bw|by|bz|ca|cc|cd|cf|cg|ch|ci|ck|cl|cm|cn|co|com|coop|cr|cu|cv|cx|cy|cz|de|dj|dk|dm|do|dz|ec|edu|ee|eg|er|es|et|eu|fi|fj|fk|fm|fo|fr|ga|gb|gd|ge|gf|gg|gh|gi|gl|gm|gn|gov|gp|gq|gr|gs|gt|gu|gw|gy|hk|hm|hn|hr|ht|hu|id|ie|il|im|in|info|int|io|iq|ir|is|it|je|jm|jo|jp|ke|kg|kh|ki|km|kn|kr|kw|ky|kz|la|lb|lc|li|lk|lr|ls|lt|lu|lv|ly|ma|mc|md|me|mg|mh|mil|mk|ml|mm|mn|mo|mp|mq|mr|ms|mt|mu|museum|mv|mw|mx|my|mz|na|name|nc|ne|net|nf|ng|ni|nl|no|np|nr|nu|nz|om|org|pa|pe|pf|pg|ph|pk|pl|pm|pn|pr|pro|ps|pt|pw|py|qa|re|ro|rs|ru|rw|sa|sb|sc|sd|se|sg|sh|si|sj|sk|sl|sm|sn|so|sr|st|su|sv|sy|sz|tc|td|tf|tg|th|tj|tk|tl|tm|tn|to|tp|tr|tt|tv|tw|tz|ua|ug|uk|um|us|uy|uz|va|vc|ve|vg|vi|vn|vu|wf|ws|ye|yt|yu|za|zm|zw)$/)
+    my $valid_tlds = LJ::load_valid_tlds();
+    unless ($domain =~ /^[\w-]+(?:\.[\w-]+)*\.(\w+)$/ && $valid_tlds->{$1})
     {
         return $reject->("bad_domain",
                          "Your email address domain is invalid.");
@@ -9418,7 +9373,9 @@ sub clear_rel {
 # </LJFUNC>
 sub journal_base
 {
-    my ($user, $vhost) = @_;
+    my ($user, %opts) = @_;
+    my $vhost = $opts{vhost};
+    my $protocol = $LJ::IS_SSL ? "https" : "http";
 
     my $u = LJ::isu( $user ) ? $user : LJ::load_user( $user );
     $user = $u->user if $u;
@@ -9448,16 +9405,16 @@ sub journal_base
 
         if ( $rule->[0] && $user !~ /^\_/ && $user !~ /\_$/ ) {
             $user =~ s/_/-/g;
-            return "http://$user.$LJ::DOMAIN";
+            return "$protocol://$user.$LJ::DOMAIN";
         } else {
-            return "http://$rule->[1]/$user";
+            return "$protocol://$rule->[1]/$user";
         }
     }
 
     if ($vhost eq "users") {
         my $he_user = $user;
         $he_user =~ s/_/-/g;
-        return "http://$he_user.$LJ::USER_DOMAIN";
+        return "$protocol://$he_user.$LJ::USER_DOMAIN";
     } elsif ($vhost eq "tilde") {
         return "$LJ::SITEROOT/~$user";
     } elsif ($vhost eq "community") {
@@ -9465,7 +9422,7 @@ sub journal_base
     } elsif ($vhost eq "front") {
         return $LJ::SITEROOT;
     } elsif ($vhost =~ /^other:(.+)/) {
-        return "http://$1";
+        return "$protocol://$1";
     } else {
         return "$LJ::SITEROOT/users/$user";
     }
@@ -9512,7 +9469,7 @@ sub make_journal {
     return unless $styleid;
 
 
-    $u->{'_journalbase'} = $u->journal_base( $opts->{'vhost'} );
+    $u->{'_journalbase'} = $u->journal_base( vhost => $opts->{'vhost'} );
 
     my $eff_view = $LJ::viewinfo{$view}->{'styleof'} || $view;
 
@@ -9685,41 +9642,16 @@ sub make_journal {
         return $notice->( BML::ml( 'error.vhost.nocomm' ) );
     }
     if ($view eq "network" && ! LJ::get_cap($u, "friendsfriendsview")) {
-        my $inline;
-        if ($inline .= LJ::Hooks::run_hook("cprod_inline", $u, 'FriendsFriendsInline')) {
-            return $inline;
-        } else {
-            return BML::ml('cprod.friendsfriendsinline.text3.v1');
-        }
+        return BML::ml('cprod.friendsfriendsinline.text3.v1');
     }
 
     # signal to LiveJournal.pm that we can't handle this
-    # FIXME: Make this properly invoke siteviews all the time -- once all the views are ready.
-    # Most of this if and tons of messy conditionals can go away once all views are done.
     if ( $stylesys == 1 || $stylearg eq 'site' || $stylearg eq 'light' ) {
-        # FIXME: The month view is currently not styled in siteviews
-        my $fallback = $view eq 'month' ? 'bml' : 's2';
-
         # If they specified ?format=light, it means they want a page easy
         # to deal with text-only or on a mobile device.  For now that means
         # render it in the lynx site scheme.
         DW::SiteScheme->set_for_request( 'lynx' )
             if $stylearg eq 'light';
-
-        # but if the user specifies which they want, override the fallback we picked
-        if ($geta->{'fallback'} && $geta->{'fallback'} =~ /^s2|bml$/) {
-            $fallback = $geta->{'fallback'};
-        }
-
-        # Only the month view has a BML version.
-        $fallback = 's2'
-            if $view ne 'month';
-
-        # fall back to legacy BML unless we're using siteviews
-        if ($fallback eq 'bml') {
-            ${$opts->{'handle_with_bml_ref'}} = 1;
-            return;
-        }
 
         # Render a system-owned S2 style that renders
         # this content, then passes it to get treated as BML
@@ -9907,22 +9839,18 @@ sub make_journal {
 
         my $mj;
 
-        if ( $opts->{'handle_with_bml_ref'} && ${$opts->{'handle_with_bml_ref'}} ) {
-            $mj = LJ::S2::make_journal($u, "siteviews", $view, $remote, $opts);
-        } else {
-            eval {
-                $mj = LJ::S2::make_journal($u, $styleid, $view, $remote, $opts);
-            };
-            if ( $@ ) {
-                if ( $remote && $remote->show_raw_errors ) {
-                    my $r = DW::Request->get;
-                    $r->content_type("text/html");
-                    $r->print("<b>[Error: $@]</b>");
-                    warn $@;
-                    return;
-                } else {
-                    die $@;
-                }
+        eval {
+            $mj = LJ::S2::make_journal($u, $styleid, $view, $remote, $opts);
+        };
+        if ( $@ ) {
+            if ( $remote && $remote->show_raw_errors ) {
+                my $r = DW::Request->get;
+                $r->content_type("text/html");
+                $r->print("<b>[Error: $@]</b>");
+                warn $@;
+                return;
+            } else {
+                die $@;
             }
         }
 

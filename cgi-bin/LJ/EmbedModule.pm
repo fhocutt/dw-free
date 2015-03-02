@@ -567,6 +567,23 @@ sub module_iframe_tag {
         $height = MAX_HEIGHT if $height > MAX_HEIGHT;
     }
 
+    my $wrapper_style = "max-width: $width" . ($width_unit || "px") . "; max-height: " . MAX_HEIGHT . "px;";
+
+    # this is the ratio between
+    my $padding_based_on_aspect_ratio;
+    if ( $height_unit eq $width_unit ) {
+        $padding_based_on_aspect_ratio = $height / $width * 100;
+        $padding_based_on_aspect_ratio .= "%";
+    } else {
+        if ( $height_unit eq "%" ) {
+            $padding_based_on_aspect_ratio = $height / 100 * $width;
+        } else {
+            $padding_based_on_aspect_ratio = $width / 100 * $height;
+        }
+        $padding_based_on_aspect_ratio .= "px";
+    }
+    my $ratio_style = "padding-top: $padding_based_on_aspect_ratio";
+
     # safari caches state of sub-resources aggressively, so give
     # each iframe a unique 'name' and 'id' attribute
     # append a random string to the name so it can't be targetted by links
@@ -575,9 +592,10 @@ sub module_iframe_tag {
     my $direct_link = defined $url
                     ? '<div><a href="' . $url . '">' .  $linktext . '</a></div>' : '';
     my $auth_token = LJ::eurl(LJ::Auth->sessionless_auth_token('embedcontent', moduleid => $moduleid, journalid => $journalid, preview => $preview,));
-    my $iframe_link = qq{http://$LJ::EMBED_MODULE_DOMAIN/?journalid=$journalid&moduleid=$moduleid&preview=$preview&auth_token=$auth_token};
-    my $iframe_tag = qq {<iframe src="$iframe_link" }
-        . qq{width="$width$width_unit" height="$height$height_unit" allowtransparency="true" frameborder="0" class="lj_embedcontent" id="$id" name="$name"></iframe>}
+    my $iframe_link = qq{//$LJ::EMBED_MODULE_DOMAIN/?journalid=$journalid&moduleid=$moduleid&preview=$preview&auth_token=$auth_token};
+    my $iframe_tag = qq {<div class="lj_embedcontent-wrapper" style="$wrapper_style"><div class="lj_embedcontent-ratio" style="$ratio_style"><iframe src="$iframe_link"}
+        . qq{ sandbox="allow-same-origin allow-scripts allow-forms" width="$width$width_unit" height="$height$height_unit" allowtransparency="true" frameborder="0"}
+        . qq{ class="lj_embedcontent" id="$id" name="$name"></iframe></div></div>}
         . qq{$direct_link};
 
     my $remote = LJ::get_remote();
@@ -624,8 +642,12 @@ sub module_content {
     my $journalid = $opts{journalid}+0
         or croak "No journalid";
     my $journal = LJ::load_userid($journalid) or die "Invalid userid $journalid";
-    return '' if ($journal->is_expunged);
+    return { content => '' } if $journal->is_expunged;
+
     my $preview = $opts{preview};
+
+    # are we displaying the content? (as opposed to processing the text for other reasons)
+    my $display = $opts{display_as_content};
 
     # try memcache
     my $memkey = $class->memkey($journalid, $moduleid, $preview);
@@ -650,7 +672,7 @@ sub module_content {
     LJ::text_uncompress(\$content) if $content =~ s/^C-//;
 
     # clean js out of content
-    LJ::CleanHTML::clean_embed( \$content );
+    LJ::CleanHTML::clean_embed( \$content, { display_as_content => $display });
 
     my $return_content;
 

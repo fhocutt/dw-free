@@ -210,7 +210,8 @@ function Page::print_entry(Entry e)
     $e->print_userpic();
     """<div class="poster-info">\n""";
     $e->print_poster();
-    $e->print_time();
+    var string timefmt = $this.timeformat24 ? "short_24" : "short";
+    $e->print_time( $*entry_date_format, $timefmt );
     """</div>\n""";
     """</div>\n""";
     """<div class="action-box">\n""";
@@ -335,7 +336,14 @@ function EntryPage::print_comment_section(Entry e) {
 
 function EntryPage::print_comments (Comment[] cs) {
     if (size $cs == 0) { return; }
-    foreach var Comment c ($cs) {
+
+    # Iterate over the comment tree structure
+    var Comment c;
+    var Comment[] cs_stack = reverse $cs;
+    while (size $cs_stack) {
+        $c = pop $cs_stack;
+        push $cs_stack, reverse $c.replies;
+
         var string parity = $c.depth % 2 ? "odd" : "even";
         var int indent = ($c.depth - 1) * 25;
         "<div class='comment-thread comment-depth-$parity comment-depth-$c.depth'>\n";
@@ -350,7 +358,6 @@ function EntryPage::print_comments (Comment[] cs) {
             $this->print_comment_partial($c);
         }
         "</div></div>";
-        $this->print_comments($c.replies);
     }
 }
 
@@ -365,7 +372,8 @@ function EntryPage::print_comment (Comment c) {
     $c->print_subject({ "format" => "text" });
     $c->print_metatypes();
     $c->print_poster();
-    $c->print_time();
+    var string timefmt = $this.timeformat24 ? "short_24" : "short";
+    $c->print_time( $*entry_date_format, $timefmt );
     $c->print_metadata();
 
    print safe """<span class="commentpermalink">(<a href="$c.permalink_url">link</a>)</span>\n"""; $c->print_management_links();
@@ -404,7 +412,8 @@ function ReplyPage::print_comment (Comment c) {
     """<div class="poster-info">\n""";
     $c->print_poster();
     $c->print_metatypes();
-    $c->print_time();
+    var string timefmt = $this.timeformat24 ? "short_24" : "short";
+    $c->print_time( $*entry_date_format, $timefmt );
     """</div>\n""";
     """</div>\n""";
     """</div>\n""";
@@ -457,4 +466,68 @@ function EntryPage::print_title() {
 function ReplyPage::print_title() {
     # Do not actually *print* anything here, or in overridden instances, just call set_content with windowtitle or title as appropriate.
     $*SITEVIEWS->set_content("windowtitle",$this.journal.username + $*text_default_separator + $this->view_title());
+}
+
+# MonthPage Functions
+
+function MonthPage::print_title() {
+    # Do not actually *print* anything here, or in overridden instances, just call set_content with windowtitle or title as appropriate.
+    $*SITEVIEWS->set_content("windowtitle",$this.journal.username + $*text_default_separator + $this->view_title());
+}
+
+function MonthPage::print_body {
+var MonthDay[] days = $*reverse_sortorder_month ? reverse $.days : $.days;
+    """
+    <div id="archive-month">
+        <div class="inner">
+    """;
+    $this->print_navigation( { "class" => "highlight-box" } );
+
+    """
+            <div class="month">
+                <div class="inner">
+                    <dl>
+                    """;
+
+    foreach var MonthDay d ($days) {
+        if ($d.has_entries) {
+            """<dt><a href="$d.url"><b>""";
+                    print lang_ordinal($d.day);
+            "</b></a></dt>";
+
+            "\n<dd>";
+            $d->print_subjectlist();
+            "</dd>\n";
+        }
+    }
+                """
+                </dl>
+            </div><!-- month>inner -->
+        </div><!-- month -->
+
+        </div><!-- archive-month>inner -->
+    </div><!--archive-month -->
+    """;
+}
+
+function MonthDay::print_subjectlist() {
+var Entry[] entries = $*reverse_sortorder_month ? reverse $.entries : $.entries;
+    # Too many tables...
+    var Page p = get_page();
+
+    foreach var Entry e ($entries) {
+        $e->print_time("none", "");
+        $e->print_poster();
+        $e->print_subject();
+        $e->print_metatypes();
+        if ($e.comments.count > 0) {
+            print safe " - " + get_plural_phrase($e.comments.count, "text_read_comments");
+        }
+        if ($e.comments.screened) {
+            print safe " <b>$*text_month_screened_comments</b>";
+        }
+        "<br />\n";
+        $e->print_tags();
+        "<br />\n";
+    }
 }

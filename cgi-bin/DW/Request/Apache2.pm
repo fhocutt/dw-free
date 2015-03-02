@@ -256,12 +256,20 @@ sub HTTP_CREATED {
     return Apache2::Const::HTTP_CREATED;
 }
 
+sub MOVED_PERMANENTLY {
+    return Apache2::Const::HTTP_MOVED_PERMANENTLY;
+}
+
 sub REDIRECT {
     return Apache2::Const::REDIRECT;
 }
 
 sub NOT_FOUND {
     return Apache2::Const::NOT_FOUND;
+}
+
+sub HTTP_GONE {
+    return Apache2::Const::HTTP_GONE;
 }
 
 sub SERVER_ERROR {
@@ -300,6 +308,11 @@ sub FORBIDDEN {
 sub spawn {
     my DW::Request::Apache2 $self = shift;
     return $self->{r}->spawn_proc_prog( @_ );
+}
+
+sub no_cache {
+    my DW::Request::Apache2 $self = shift;
+    return $self->{r}->no_cache( 1 );
 }
 
 1;

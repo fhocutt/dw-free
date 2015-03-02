@@ -859,7 +859,7 @@ sub body_orig {
 
 # comment body, cleaned
 sub body_html {
-    my $self = $_[0];
+    my ( $self, %extra_opts ) = @_;
 
     my $opts;
     $opts->{preformatted} = $self->prop("opt_preformatted");
@@ -873,8 +873,8 @@ sub body_html {
 
 # comement body, but trimmed to $char_max
 sub body_html_summary {
-    my ( $self, $char_max ) = @_;
-    return LJ::html_trim( $self->body_html, $char_max );
+    my ( $self, $char_max, %opts ) = @_;
+    return LJ::html_trim( $self->body_html( %opts ), $char_max );
 }
 
 # comment body, plaintext

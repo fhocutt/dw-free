@@ -60,7 +60,7 @@ sub name_text {
 # override
 sub name_html {
     return $_[0]->token && $_[0]->from_userid == $_[0]->t_userid
-        ? LJ::Lang::ml( 'shop.item.rename.name.hastoken', { token => $_[0]->token, aopts => "href='$LJ::SITEROOT/rename/" . $_[0]->token . "'" } )
+        ? LJ::Lang::ml( 'shop.item.rename.name.hastoken', { token => $_[0]->token, aopts => "href='$LJ::SITEROOT/rename?giventoken=" . $_[0]->token . "'" } )
         : LJ::Lang::ml( 'shop.item.rename.name.notoken', { points => $_[0]->cost_points } );
 }
 
@@ -125,7 +125,7 @@ sub cart_state_changed {
         my $vars = {
             sitename => $LJ::SITENAME,
             touser   => $u->user,
-            tokenurl => "$LJ::SITEROOT/rename/$token",
+            tokenurl => "$LJ::SITEROOT/rename?giventoken=$token",
         };
 
         if ( $u->equals( $fu ) ) {
@@ -136,6 +136,10 @@ sub cart_state_changed {
         } else {
             $from = "anon";
         }
+
+        DW::Stats::increment( 'dw.shop.rename_tokens.created', 1,
+                [ 'gift:' . ( $from eq 'self' ? 'no' : 'yes' ),
+                  'anonymous:' . ( $from eq 'anon' ? 'yes' : 'no' ) ] );
 
         LJ::send_mail( {
             to => $u->email_raw,

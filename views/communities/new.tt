@@ -5,6 +5,8 @@ Conversion of htdocs/community/create.bml
 Authors:
     Afuna <coder.dw@afunamatata.com>
 
+Copyright (c) 2015 by Dreamwidth Studios, LLC.
+
 This program is free software; you may redistribute it and/or modify it under
 the same terms as Perl itself.  For a copy of the license, please reference
 'perldoc perlartistic' or 'perldoc perlgpl'.
@@ -14,10 +16,11 @@ the same terms as Perl itself.  For a copy of the license, please reference
 [%- CALL dw.active_resource_group( "foundation" ) -%]
 
 [%- dw.need_res( { group => "foundation" }
-    "js/jquery.validation.js"
-    "js/jquery.checkusername.js"
-    "js/page/jquery.communities-new.js"
-    "stc/css/pages/communities/new.css"
+    "js/components/jquery.validation.js"
+    "js/components/jquery.check-username.js"
+    "stc/css/components/check-username.css"
+
+    "js/pages/jquery.communities-new.js"
 ) -%]
 
 
@@ -27,11 +30,11 @@ the same terms as Perl itself.  For a copy of the license, please reference
         <legend>[% '.form.comminfo.legend' | ml %]</legend>
 
             <div class="row collapse">
-                <label for="user">[% '.form.comminfo.user.label' | ml %]</label>
+                <label for="js-user">[% '.form.comminfo.user.label' | ml %]</label>
                 <div class="small-7 large-8 columns">
                 [%- form.textbox(
                     name = "user"
-                    id   = "user"
+                    id   = "js-user"
                     maxlength = 25
                     class = "journaltype-textbox community-textbox"
                 ) -%]
@@ -43,32 +46,11 @@ the same terms as Perl itself.  For a copy of the license, please reference
                 label = dw.ml( '.form.comminfo.title.label' )
                 hint = dw.ml( '.form.comminfo.title.hint' )
                 name  = "title"
-                id    = "title"
                 maxlength = 80
             ) -%]
     </fieldset>
 
-    <fieldset>
-        <legend>[% '.form.membership.legend' | ml %]</legend>
-        [%- form.radio_nested(
-            label = dw.ml( 'setting.communitymembership.option.select.open' )
-            name  = "membership"
-            id    = "membership_open"
-            value = "open"
-        ) -%]
-        [%- form.radio_nested(
-            label = dw.ml( 'setting.communitymembership.option.select.moderated' )
-            name  = "membership"
-            id    = "membership_moderated"
-            value = "moderated"
-        ) -%]
-        [%- form.radio_nested(
-            label = dw.ml( 'setting.communitymembership.option.select.closed' )
-            name  = "membership"
-            id    = "membership_closed"
-            value = "closed"
-        ) -%]
-    </fieldset>
+    [%- dw.scoped_include( 'communities/_initial_settings.tt' ) -%]
 
     [% form.submit( value = dw.ml( '.form.submit.create' ) ) %]
 

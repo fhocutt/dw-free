@@ -50,6 +50,7 @@ propgroup colors_child {
 
 
 function print_stylesheet () {
+    var string medium_media_query = generate_medium_media_query();
 
     var string footer_inner_colors = generate_color_css (new Color, $*color_module_footer_background, $*color_module_title_background);
     var string entry_bar_colors = generate_color_css($*color_entry_text, $*color_entry_footer_background, $*color_entry_border);
@@ -89,7 +90,9 @@ var string userpic_css = "";
 
 a { text-decoration: none; }
 
-.two-columns-left #tertiary .module, .two-columns-right #tertiary .module { margin:0 10px; }
+@media $medium_media_query {
+    .two-columns #tertiary .module { margin:0 10px; }
+}
 
 blockquote {
     padding: 10px;
@@ -209,8 +212,6 @@ h3.entry-title {
 
 .entry .footer {
     clear: both;
-    padding: 0 0 35px;
-    border-bottom: 15px solid $*color_entry_footer_background;
 }
 
 .entry .footer .tag {
@@ -270,9 +271,15 @@ ul.entry-management-links {
 
 ul.entry-interaction-links {
     float: right;
-    padding: 5px 15px;
+    padding: 0 15px;
 }
 .entry-wrapper .separator-after {background: $*color_entry_border }
+
+.entry .footer .inner:after, .comment .footer .inner:after { /* clearfix */
+  content: "";
+  display: table;
+  clear: both;
+}
 
 /* ------- comments --------- */
 
@@ -298,7 +305,7 @@ ul.entry-interaction-links {
 #comments .comment-content { padding: 10px 20px; }
 
 #comments .footer {
-    padding: 0 10px 40px 20px;
+    padding: 0 10px 0 20px;
     background: $*color_entry_background;
 }
 
@@ -315,15 +322,16 @@ ul.entry-interaction-links {
     background-color: $*color_comment_title_background;
     color: $*color_comment_title;}
 
-.comment .comment-content { background-color: $*color_entry_background;
-    color: $*color_entry_text !important;
-    color: $*color_page_text;}
+.comment { background-color: $*color_entry_background;
+    color: $*color_entry_text;
+}
 
 .comment .comment-content { clear: left }
 
 .comment-interaction-links, .comment-management-links {
     float: left;
     font-size: .9em;
+    margin-bottom: .5em;
 }
 
 .footer .inner .multiform-checkbox {
@@ -514,10 +522,15 @@ table.month td.day-has-entries {
 }
 
 .module-userprofile .module-content,
-.module-calendar .module-content,
-.module-syndicate  .module-content,
 .module-credit .module-content {
     text-align: center;
+}
+
+@media $medium_media_query {
+    .multiple-columns .module-calendar .module-content,
+    .multiple-columns .module-syndicate  .module-content {
+        text-align: center;
+    }
 }
 
 .module-userprofile .userpic {
@@ -677,6 +690,7 @@ function print_module_navlinks() {
 
 function Page::print() {
     """<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">\n<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">\n<head profile="http://www.w3.org/2006/03/hcard http://purl.org/uF/hAtom/0.1/ http://gmpg.org/xfn/11">\n""";
+    $this->print_meta_tags();
     $this->print_head();
     $this->print_stylesheets();
     $this->print_head_title();
@@ -689,9 +703,7 @@ function Page::print() {
             <div id="header">
                 <div class="inner">
                     """;
-                    $this->print_global_title();
-                    $this->print_global_subtitle();
-                    $this->print_title();
+                    $this->print_header();
     """
                 </div><!-- end header>inner -->
     """;

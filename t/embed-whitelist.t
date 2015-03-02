@@ -15,10 +15,10 @@
 use strict;
 use warnings;
 
-use Test::More tests => 44;
+use Test::More tests => 53;
 
 use lib "$ENV{LJHOME}/cgi-bin";
-BEGIN { require 'ljlib.pl'; }
+BEGIN { $LJ::_T_CONFIG = 1; require 'ljlib.pl'; }
 
 use DW::Hooks::EmbedWhitelist;
 
@@ -27,7 +27,8 @@ sub test_good_url {
     my $url = $_[0];
     my $msg = $_[1];
     subtest "good embed url $url", sub {
-        ok( LJ::Hooks::run_hook( "allow_iframe_embeds", $url ), $msg );
+        my ( $url_ok, $can_https ) = LJ::Hooks::run_hook( "allow_iframe_embeds", $url );
+        ok( $url_ok, $msg );
     }
 }
 
@@ -106,8 +107,6 @@ note( "misc" );
 
     test_good_url( "https://embed.spotify.com/?uri=spotify:track:1DeuZgn99eUC1hreXTWBvY" );
 
-    test_good_url( "http://www.twitvid.com/embed.php?guid=QNDLU&autoplay=0" );
-
     test_good_url( "http://player.vimeo.com/video/123123123?title=0&byline=0&portrait=0" );
     test_bad_url( "http://player.vimeo.com/video/123abc?title=0&byline=0&portrait=0" );
 
@@ -119,6 +118,23 @@ note( "misc" );
     test_good_url( "http://www.criticalcommons.org/Members/china_shop/clips/handle-with-care-white-collar-fanvid/embed_view" );
 
     test_good_url( "http://embed.ted.com/talks/handpring_puppet_co_the_genius_puppetry_behind_war_horse.html" );
+
+    test_good_url( "https://archive.org/embed/LeonardNimoy15Oct2013YiddishBookCenter" );
+
+    test_good_url( "http://video.yandex.ru/iframe/v-rednaia7/9hvgcmpgkd.5440/" );
+
+    test_good_url( "http://episodecalendar.com/icalendar/sampleuser\@example.com/abcde/", "Will 404, but correctly-formed" );
+
+    test_good_url( "https://www.flickr.com/photos/cards_by_krisso/13983859958/player/" );
+
+    test_good_url( "http://www.npr.org/templates/event/embeddedVideo.php?storyId=326182003&mediaId=327658636" );
+
+    test_good_url( "//imgur.com/a/J4OKE/embed" );
+
+    test_good_url( "https://vine.co/v/bjHh0zHdgZT/embed/simple" );
+    test_bad_url( "https://vine.co/v/bjHh0zHdgZT/embed/postcard" );
+    test_bad_url( "https://vine.co/v/bjHh0zHdgZT/embed" );
+    test_bad_url( "https://vine.co/v/abc/embed/simple" );
 }
 
 

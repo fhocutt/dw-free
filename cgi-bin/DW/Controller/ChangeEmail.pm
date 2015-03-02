@@ -51,13 +51,13 @@ sub changeemail_handler {
     $vars->{is_community} = 1 if $u->is_community;
 
     # Warn if logged in and not validated
-    $vars->{notvalidated} = 1 if ( $u && !LJ::did_post() && $u->{'status'} ne 'A' && !$is_identity_no_email );
+    $vars->{notvalidated} = 1 if ( $u && !$r->did_post && $u->{'status'} ne 'A' && !$is_identity_no_email );
 
     $vars->{old_email} = $is_identity_no_email ? '' : $u->email_raw;
 
     $vars->{authas_html} = $rv->{authas_html};
-    
-    if ( $post->{mode} eq 'submit' && ( $post->{email} || $post->{password} ) ) {
+
+    if ( $r->did_post && ( $post->{email} || $post->{password} ) ) {
         my $password;
         $password = $post->{password} unless $remote->is_identity;
         my $email = LJ::trim( $post->{email} );

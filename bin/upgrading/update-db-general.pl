@@ -347,20 +347,6 @@ CREATE TABLE priv_map (
 )
 EOC
 
-register_tablecreate("cmdbuffer", <<'EOC');
-CREATE TABLE cmdbuffer (
-    cbid INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    journalid INT UNSIGNED NOT NULL,
-    cmd VARCHAR(30) NOT NULL default '',
-    instime datetime NOT NULL default '0000-00-00 00:00:00',
-    args TEXT NOT NULL,
-
-    PRIMARY KEY  (cbid),
-    KEY (cmd),
-    KEY (journalid)
-)
-EOC
-
 register_tablecreate("random_user_set", <<'EOC');
 CREATE TABLE random_user_set (
     posttime INT UNSIGNED NOT NULL,
@@ -369,27 +355,6 @@ CREATE TABLE random_user_set (
 
     PRIMARY KEY (userid),
     INDEX (posttime)
-)
-EOC
-
-register_tablecreate("schemacols", <<'EOC');
-CREATE TABLE schemacols (
-    tablename varchar(40) NOT NULL default '',
-    colname varchar(40) NOT NULL default '',
-    des varchar(255) default NULL,
-
-    PRIMARY KEY  (tablename,colname)
-)
-EOC
-
-register_tablecreate("schematables", <<'EOC');
-CREATE TABLE schematables (
-    tablename varchar(40) NOT NULL default '',
-    public_browsable enum('0','1') NOT NULL default '0',
-    redist_mode enum('off','insert','replace') NOT NULL default 'off',
-    des text,
-
-    PRIMARY KEY  (tablename)
 )
 EOC
 
@@ -462,11 +427,22 @@ EOC
 register_tablecreate("supportcat", <<'EOC');
 CREATE TABLE supportcat (
     spcatid int(10) unsigned NOT NULL auto_increment,
+    catkey VARCHAR(25) NOT NULL,
     catname varchar(80) default NULL,
     sortorder mediumint(8) unsigned NOT NULL default '0',
     basepoints tinyint(3) unsigned NOT NULL default '1',
+    is_selectable ENUM('1','0') NOT NULL DEFAULT '1',
+    public_read  ENUM('1','0') NOT NULL DEFAULT '1',
+    public_help ENUM('1','0') NOT NULL DEFAULT '1',
+    allow_screened ENUM('1','0') NOT NULL DEFAULT '0',
+    hide_helpers ENUM('1','0') NOT NULL DEFAULT '0',
+    user_closeable ENUM('1', '0') NOT NULL DEFAULT '1',
+    replyaddress VARCHAR(50),
+    no_autoreply ENUM('1', '0') NOT NULL DEFAULT '0',
+    scope ENUM('general', 'local') NOT NULL DEFAULT 'general',
 
-    PRIMARY KEY  (spcatid)
+    PRIMARY KEY  (spcatid),
+    UNIQUE (catkey)
 )
 EOC
 
@@ -967,6 +943,20 @@ register_tabledrop("zip");
 register_tabledrop("openid_external");
 register_tabledrop("site_messages");
 register_tabledrop("navtag");
+register_tabledrop("syndicated_hubbub2");
+register_tabledrop("openproxy");
+register_tabledrop("tor_proxy_exits");
+register_tabledrop("cmdbuffer");
+register_tabledrop("schemacols");
+register_tabledrop("schematables");
+register_tabledrop("blockwatch_events");
+register_tabledrop("cprodlist");
+register_tabledrop("cprod");
+register_tabledrop("jabroster");
+register_tabledrop("jabpresence");
+register_tabledrop("jabcluster");
+register_tabledrop("jablastseen");
+
 
 register_tablecreate("infohistory", <<'EOC');
 CREATE TABLE infohistory (
@@ -1312,26 +1302,6 @@ CREATE TABLE syndicated (
 )
 EOC
 
-register_tablecreate("syndicated_hubbub2", <<'EOC');
-CREATE TABLE syndicated_hubbub2 (
-    id INT UNSIGNED NOT NULL,
-    userid INT UNSIGNED NOT NULL,
-    huburl VARCHAR(255) NOT NULL,
-    topicurl VARCHAR(255) NOT NULL,
-    verifytoken VARCHAR(64) NOT NULL,
-    lastseenat INT UNSIGNED NOT NULL,
-    leasegoodto INT UNSIGNED,
-    timespinged INT UNSIGNED NOT NULL DEFAULT '0',
-
-    UNIQUE (userid, huburl, topicurl),
-    UNIQUE (verifytoken),
-    INDEX (topicurl),
-    INDEX (leasegoodto),
-    INDEX (lastseenat),
-    PRIMARY KEY (id)
-)
-EOC
-
 register_tablecreate("synitem", <<'EOC');
 CREATE TABLE synitem (
     userid  INT UNSIGNED NOT NULL,
@@ -1669,18 +1639,6 @@ CREATE TABLE clustermove_inprogress (
 )
 EOC
 
-# track open HTTP proxies
-register_tablecreate("openproxy", <<'EOC');
-CREATE TABLE openproxy (
-    addr        VARCHAR(15) NOT NULL,
-    status      ENUM('proxy', 'clear'),
-    asof        INT UNSIGNED NOT NULL,
-    src         VARCHAR(80),
-
-    PRIMARY KEY (addr)
-)
-EOC
-
 register_tablecreate("spamreports", <<'EOC'); # global
 CREATE TABLE spamreports (
     reporttime  INT(10) UNSIGNED NOT NULL,
@@ -2002,6 +1960,49 @@ CREATE TABLE openid_endpoint (
 )
 EOC
 
+register_tablecreate("oauth_consumer", <<'EOC');
+CREATE TABLE oauth_consumer (
+    consumer_id int(10) UNSIGNED NOT NULL,
+    userid int(10) UNSIGNED NOT NULL,
+
+    communityid int(10) UNSIGNED NULL,
+
+    token VARCHAR(20) NOT NULL,
+    secret VARCHAR(50) NOT NULL,
+
+    name VARCHAR(255) NOT NULL DEFAULT '',
+    website VARCHAR(255) NOT NULL,
+
+    createtime INT UNSIGNED NOT NULL,
+    updatetime INT UNSIGNED NULL,
+    invalidatedtime INT UNSIGNED NULL,
+
+    approved ENUM('1','0') NOT NULL DEFAULT 1,
+    active ENUM('1','0') NOT NULL DEFAULT 1,
+
+    PRIMARY KEY (consumer_id),
+    UNIQUE KEY (token),
+    KEY (userid)
+)
+EOC
+
+register_tablecreate("oauth_access_token", <<'EOC');
+CREATE TABLE oauth_access_token (
+    consumer_id int(10) UNSIGNED NOT NULL,
+    userid int(10) UNSIGNED NOT NULL,
+
+    token VARCHAR(20) NULL,
+    secret VARCHAR(50) NULL,
+
+    createtime INT UNSIGNED NOT NULL,
+    lastaccess INT UNSIGNED,
+
+    PRIMARY KEY consumer_user (consumer_id, userid),
+    UNIQUE KEY (token),
+    KEY (userid)
+)
+EOC
+
 register_tablecreate("priv_packages", <<'EOC');
 CREATE TABLE priv_packages (
     pkgid int(10) unsigned NOT NULL auto_increment,
@@ -2187,39 +2188,6 @@ CREATE TABLE notifyqueue (
 )
 EOC
 
-# global (contextual product prodding, "hey, you've never used polls, wanna learn how?")
-register_tablecreate("cprodlist", <<'EOC');
-CREATE TABLE cprodlist (
-    cprodid   SMALLINT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
-    class     VARCHAR(100),
-
-    UNIQUE (class)
-)
-EOC
-
-# contextual product prodding history, making sure we don't bug people when they
-# don't want it anymore.
-#
-#   -- firstshowtime: when it was first highlighted to them (not all the everything page)
-#   -- recentshowtime: a recent showing time.  perhaps not THE most recent, though.
-#   -- acktime: time the user saw the box.  either by clicking next/no/more info.
-#   -- nothankstime: also a boolean:  time/if user doesn't want to see it again
-#   -- clickthrutime:  time user clicked for more info
-register_tablecreate("cprod", <<'EOC');
-CREATE TABLE cprod (
-    userid    INT      UNSIGNED NOT NULL,
-    cprodid   SMALLINT UNSIGNED NOT NULL,
-    PRIMARY KEY (userid, cprodid),
-
-    firstshowtime      INT UNSIGNED,
-    recentshowtime     INT UNSIGNED,
-    acktime            INT UNSIGNED,
-    nothankstime       INT UNSIGNED,
-    clickthrutime      INT UNSIGNED,
-    clickthruver       SMALLINT UNSIGNED
-)
-EOC
-
 register_tablecreate("sch_funcmap", <<'EOC');
 CREATE TABLE sch_funcmap (
     funcid         INT UNSIGNED PRIMARY KEY NOT NULL AUTO_INCREMENT,
@@ -2288,51 +2256,6 @@ CREATE TABLE comm_promo_list (
 )
 EOC
 
-register_tablecreate("jabroster", <<'EOC');
-CREATE TABLE jabroster (
-    userid     INT UNSIGNED NOT NULL,
-    contactid  INT UNSIGNED NOT NULL,
-    PRIMARY KEY (userid, contactid),
-    name       VARCHAR(255) BINARY,
-    substate   TINYINT UNSIGNED NOT NULL,
-    groups     VARCHAR(255) BINARY,
-    ljflags    TINYINT UNSIGNED NOT NULL
-)
-EOC
-
-register_tablecreate("jabpresence", <<'EOC');
-CREATE TABLE jabpresence (
-    userid     INT UNSIGNED NOT NULL,
-    reshash    CHAR(22) BINARY,
-    PRIMARY KEY (userid, reshash),
-    resource   VARCHAR(255) NOT NULL,
-    client     VARCHAR(255),
-    clusterid  INT UNSIGNED NOT NULL,
-    presence   BLOB,
-    flags      INT UNSIGNED NOT NULL,
-    priority   INT UNSIGNED,
-    ctime      INT UNSIGNED NOT NULL,
-    mtime      INT UNSIGNED NOT NULL,
-    remoteip   VARCHAR(255)
-)
-EOC
-
-register_tablecreate("jabcluster", <<'EOC');
-CREATE TABLE jabcluster (
-    clusterid  INT UNSIGNED PRIMARY KEY NOT NULL AUTO_INCREMENT,
-    address    VARCHAR(255) NOT NULL
-)
-EOC
-
-register_tablecreate("jablastseen", <<'EOC');
-CREATE TABLE jablastseen (
-    userid     INT UNSIGNED NOT NULL PRIMARY KEY,
-    presence   BLOB,
-    time       INT UNSIGNED NOT NULL,
-    motd_ver   INT UNSIGNED
-)
-EOC
-
 register_tablecreate("usersearch_packdata", <<'EOC');
 CREATE TABLE usersearch_packdata (
     userid      INT UNSIGNED NOT NULL PRIMARY KEY,
@@ -2381,16 +2304,6 @@ CREATE TABLE dirmogsethandles (
     exptime  INT UNSIGNED NOT NULL,
 
     INDEX    (exptime)
-)
-EOC
-
-register_tablecreate("blockwatch_events", <<'EOC');
-CREATE TABLE blockwatch_events (
-    id int unsigned NOT NULL auto_increment,
-    name varchar(255) NOT NULL,
-
-    PRIMARY KEY (id),
-    UNIQUE KEY (name)
 )
 EOC
 
@@ -3076,13 +2989,6 @@ CREATE TABLE cc_log (
 )
 EOC
 
-register_tablecreate('tor_proxy_exits', <<'EOC');
-CREATE TABLE tor_proxy_exits (
-    addr VARCHAR(15) NOT NULL,
-    PRIMARY KEY (addr)
-)
-EOC
-
 register_tablecreate('externaluserinfo', <<'EOC');
 CREATE TABLE externaluserinfo (
     site INT UNSIGNED NOT NULL,
@@ -3104,6 +3010,7 @@ CREATE TABLE renames (
     fromuser CHAR(25),
     touser CHAR(25),
     rendate INT UNSIGNED,
+    status CHAR(1) NOT NULL DEFAULT 'A',
 
     INDEX (ownerid)
 )
@@ -3127,6 +3034,24 @@ CREATE TABLE openid_claims (
 
     PRIMARY KEY (userid),
     INDEX (claimed_userid)
+)
+EOC
+
+register_tablecreate("siteadmin_email_history", <<'EOC');
+CREATE TABLE siteadmin_email_history (
+    msgid        INT UNSIGNED NOT NULL,
+    remoteid     INT UNSIGNED NOT NULL,
+    time_sent    INT UNSIGNED NOT NULL,   #unixtime
+    account      VARCHAR(255) NOT NULL,
+    sendto       VARCHAR(255) NOT NULL,
+    subject      VARCHAR(255) NOT NULL,
+    request      INT UNSIGNED,
+    message      MEDIUMTEXT NOT NULL,
+    notes        MEDIUMTEXT,
+
+    PRIMARY KEY (msgid),
+    INDEX (account),
+    INDEX (sendto)
 )
 EOC
 
@@ -3310,12 +3235,6 @@ register_alter(sub {
         do_alter("duplock",
                  "ALTER TABLE duplock MODIFY realm ENUM('support','log',".
                  "'comment','payments') NOT NULL default 'support'");
-    }
-
-    if (column_type("schematables", "redist_where") eq "") {
-        do_alter("schematables",
-                 "ALTER TABLE schematables ADD ".
-                 "redist_where varchar(255) AFTER redist_mode");
     }
 
     # upgrade people to the new capabilities system.  if they're
@@ -3895,11 +3814,6 @@ register_alter(sub {
                   q{ALTER TABLE import_data ADD COLUMN usejournal VARCHAR(255) AFTER username} );
     }
 
-    unless ( column_type( 'syndicated_hubbub2', 'timespinged' ) ) {
-        do_alter( 'syndicated_hubbub2',
-                  q{ALTER TABLE syndicated_hubbub2 ADD COLUMN timespinged INT UNSIGNED NOT NULL DEFAULT '0'} );
-    }
-
     # FIXME: This should be moved into a maint script or something,
     #   but if someone ever does remove the " 0 && " from here, this whole body needs to be wrapped
     #   in a do_code block ( To prevent the warning message from delaying things )
@@ -4207,6 +4121,57 @@ EOF
                 . "ADD COLUMN linktext VARCHAR(255), "
                 . "ADD COLUMN url VARCHAR(255);" );
 
+    }
+
+    if ( table_relevant( "media_versions" ) && !check_dbnote( "init_media_versions_dimensions" ) ) {
+        do_sql( 'LOCK TABLES media_versions WRITE, media WRITE' );
+
+        do_code("populate media_versions using existing data in media", sub {
+            my $sth = $dbh->prepare(q{SELECT media.userid, media.mediaid, media.filesize
+                                    FROM media LEFT JOIN media_versions
+                                        ON media.userid=media_versions.userid AND media.mediaid=media_versions.mediaid
+                                        WHERE media_versions.mediaid IS NULL}
+                                    );
+            $sth->execute;
+            die $sth->errstr if $sth->err;
+
+            eval "use DW::Media::Photo; use Image::Size; 1;" or die "Unable to load media libraries";
+            my $failed = 0;
+            while ( my $row = $sth->fetchrow_hashref ) {
+                my $media_file = DW::Media::Photo->new_from_row(
+                        userid => $row->{userid},
+                        versionid => $row->{mediaid}
+                );
+                my $imagedata = LJ::mogclient()->get_file_data( $media_file->mogkey );
+                my ( $width, $height ) = Image::Size::imgsize( $imagedata );
+                unless (defined $width && defined $height) {
+                    $failed++;
+                    next;
+                }
+
+                $dbh->do(q{INSERT INTO media_versions (userid, mediaid, versionid, width, height, filesize)
+                    VALUES (?, ?, ?, ?, ?, ?)},
+                    undef, $row->{userid}, $row->{mediaid}, $row->{mediaid}, $width, $height, $row->{filesize}
+                );
+                die $dbh->errstr if $dbh->err;
+            }
+            warn "Failed: $failed" if $failed;
+        });
+
+        do_sql( 'UNLOCK TABLES' );
+        set_dbnote( "init_media_versions_dimensions", 1 );
+    }
+
+    if ( table_relevant("renames") && column_type( "renames", "status" ) eq '' ) {
+        do_alter( 'renames',
+            "ALTER TABLE renames " .
+            "ADD COLUMN status CHAR(1) NOT NULL DEFAULT 'A'" );
+        do_sql( 'UPDATE renames SET status="U" WHERE renuserid = 0' );
+    }
+
+    if ( table_relevant("codes") && !check_dbnote( 'remove_countries_from_codes' ) ) {
+        do_sql( 'DELETE FROM codes WHERE type = "country"' );
+        set_dbnote( 'remove_countries_from_codes', 1 );
     }
 });
 

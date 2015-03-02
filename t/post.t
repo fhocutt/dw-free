@@ -18,7 +18,7 @@ use warnings;
 use Test::More tests => 135;
 
 use lib "$ENV{LJHOME}/cgi-bin";
-BEGIN { require 'ljlib.pl'; }
+BEGIN { $LJ::_T_CONFIG = 1; require 'ljlib.pl'; }
 use LJ::Test qw( temp_user temp_comm );
 
 use DW::Routing::CallInfo;
@@ -292,6 +292,8 @@ my $postdecoded_bare = {
 
         adult_content        => '',
         adult_content_reason => '',
+
+        admin_post          => 0,
     }
 };
 
@@ -312,6 +314,7 @@ sub post_with {
     LJ::set_remote( $remote );
 
     $opts{event} = $postdata->{event} unless exists $opts{event};
+    $opts{chal} = LJ::challenge_generate();
 
     # if we'd been in a handler, this would have been put into $vars->{formdata}
     # and automatically converted to Hash::MultiValue. We're not, though, so fake it

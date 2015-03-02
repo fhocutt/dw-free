@@ -206,7 +206,8 @@ sub make_feed
         }
 
         # an HTML link to the entry. used if we truncate or summarize
-        my $readmore = "<b>(<a href=\"$journalinfo->{link}$ditemid.html\">Read more ...</a>)</b>";
+        my $entry_url = $entry_obj->url;
+        my $readmore = q{<b>(<a href="$entry_url">Read more ...</a>)</b>};
 
         # empty string so we don't waste time cleaning an entry that won't be used
         my $event = $u->{'opt_synlevel'} eq 'title' ? '' : $logtext->{$itemid}->[1];
@@ -226,7 +227,7 @@ sub make_feed
                                        {
                                         wordlength => 0,
                                         preformatted => $logprops{$itemid}->{opt_preformatted},
-                                        cuturl => $u->{opt_synlevel} eq 'cut' ? "$journalinfo->{link}$ditemid.html" : "",
+                                        cuturl => $u->{opt_synlevel} eq 'cut' ? $entry_url : "",
                                         to_external_site => 1,
                                        });
             # do this after clean so we don't have to about know whether or not
@@ -291,6 +292,7 @@ sub make_feed
             security   => $it->{security},
             posterid   => $it->{posterid},
             replycount => $logprops{$itemid}->{'replycount'},
+            url        => $entry_url,
         };
         push @cleanitems, $cleanitem;
         push @entries,    $entry_obj;
@@ -315,7 +317,6 @@ sub _add_feed_namespace {
 # helper method for create_view_rss and create_view_comments
 sub _init_talkview {
     my ( $journalinfo, $u, $opts, $talkview ) = @_;
-    my $hubbub = $talkview eq 'rss' && LJ::is_enabled( 'hubbub' );
     my $bot_director = LJ::Hooks::run_hook( "bot_director", "<!-- ", " -->" ) || '';
     my $ret;
 
@@ -340,13 +341,6 @@ sub _init_talkview {
     $ret .= "  <lj:journal>" . $u->user . "</lj:journal>\n";
     $ret .= "  <lj:journaltype>" . $u->journaltype_readable . "</lj:journaltype>\n";
     # TODO: add 'language' field when user.lang has more useful information
-
-    if ( $hubbub ) {
-        $ret .= "  <atom10:link rel='self' href='" . $u->journal_base . "/data/rss' />\n";
-        foreach my $hub (@LJ::HUBBUB_HUBS) {
-            $ret .= "  <atom10:link rel='hub' href='" . LJ::exml($hub) . "' />\n";
-        }
-    }
 
     ### image block, returns info for their current userpic
     if ( $u->{'defaultpicid'} ) {
@@ -383,18 +377,19 @@ sub create_view_rss {
         my $poster = $posteru{$it->{posterid}};
 
         $ret .= "<item>\n";
+        # use the $ditemid form so it doesn't change
         $ret .= "  <guid isPermaLink='true'>$journalinfo->{link}$ditemid.html</guid>\n";
         $ret .= "  <pubDate>" . LJ::time_to_http($it->{createtime}) . "</pubDate>\n";
         $ret .= "  <title>" . LJ::exml($it->{subject}) . "</title>\n" if $it->{subject};
         $ret .= "  <author>" . LJ::exml($journalinfo->{email}) . "</author>" if $journalinfo->{email};
-        $ret .= "  <link>$journalinfo->{link}$ditemid.html</link>\n";
+        $ret .= "  <link>$it->{url}</link>\n";
         # omit the description tag if we're only syndicating titles
         #   note: the $event was also emptied earlier, in make_feed
         unless ($u->{'opt_synlevel'} eq 'title') {
             $ret .= "  <description>" . LJ::exml($it->{event}) . "</description>\n";
         }
         if ($it->{comments}) {
-            $ret .= "  <comments>$journalinfo->{link}$ditemid.html</comments>\n";
+            $ret .= "  <comments>$it->{url}</comments>\n";
         }
         $ret .= "  <category>$_</category>\n" foreach map { LJ::exml($_) } @{$it->{tags} || []};
         # support 'podcasting' enclosures
@@ -484,12 +479,6 @@ sub create_view_atom
         $ljinfo->setAttribute( 'username', LJ::exml($u->user) );
         $ljinfo->setAttribute( 'type', LJ::exml($u->journaltype_readable) );
         $xml->getDocumentElement->appendChild( $ljinfo );
-
-        if ( LJ::is_enabled( 'hubbub' ) ) {
-            foreach my $hub (@LJ::HUBBUB_HUBS) {
-                $feed->add_link($make_link->('hub', undef, $hub));
-            }
-        }
     }
 
     my $posteru = LJ::load_userids( map { $_->{posterid} } @$cleanitems);
@@ -626,7 +615,7 @@ sub create_view_foaf {
 
     # setup userprops we will need
     $u->preload_props( qw{
-        aolim icq yahoo jabber msn icbm url urlname external_foaf_url country city journaltitle
+        aolim icq yahoo jabber icbm url urlname external_foaf_url country city journaltitle
     } );
 
     # create bare foaf document, for now
@@ -698,7 +687,6 @@ sub create_view_foaf {
         aolim => 'aimChatID',
         icq => 'icqChatID',
         yahoo => 'yahooChatID',
-        msn => 'msnChatID',
         jabber => 'jabberID',
     );
     if ($u->{allow_contactshow} eq 'Y') {
@@ -1007,31 +995,6 @@ sub create_view_comments {
 
 
     return $ret;
-}
-
-sub generate_hubbub_jobs {
-    my ( $u, $joblist ) = @_;
-
-    return unless LJ::is_enabled( 'hubbub' );
-
-    foreach my $hub ( @LJ::HUBBUB_HUBS ) {
-        my $make_hubbub_job = sub {
-            my $type = shift;
-
-            my $topic_url = $u->journal_base . "/data/$type";
-            return TheSchwartz::Job->new(
-                funcname => 'TheSchwartz::Worker::PubSubHubbubPublish',
-                arg => {
-                    hub => $hub,
-                    topic_url => $topic_url,
-                },
-                coalesce => $hub,
-            );
-        };
-
-        push @$joblist, $make_hubbub_job->("rss");
-        push @$joblist, $make_hubbub_job->("atom");
-    }
 }
 
 # refactored from feeds/index

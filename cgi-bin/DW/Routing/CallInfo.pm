@@ -156,7 +156,14 @@ Should prefer SSL if possible.
 
 =cut
 
-sub prefer_ssl { return $_[0]->{__hash}->{prefer_ssl} || 0; }
+sub prefer_ssl { return $_[0]->{__hash}->{prefer_ssl} // $LJ::USE_HTTPS_EVERYWHERE; }
+
+=head2 C<< $self->no_cache >>
+
+Return whether we should prevent caching or not.
+
+=cut
+sub no_cache { return $_[0]->{__hash}->{no_cache} || 0; }
 
 =head2 C<< $self->subpatterns >>
 

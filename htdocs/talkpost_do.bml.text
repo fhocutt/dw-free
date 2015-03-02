@@ -88,21 +88,31 @@
 
 	.success.loggedin=You're now logged in.
 
-	.success.message2=Your comment has been added. You can <a [[aopts]]>view it</a>.
+	.success.message2=Your comment has been added. <a [[aopts]]>View your comment</a>.
 
-	.success.screened.comm.anon2=Your anonymous comment has been added and marked as screened; it will be visible only to the community administrators until they choose to unscreen it. <a [[aopts]]>Go back to the comment thread</a>.
+	.success.screened.comm.anon3=Your anonymous comment has been added and marked as screened. It will be visible only to the community administrators until they choose to unscreen it. <a [[aopts]]>View your comment.</a>.
 
-.success.screened.comm.owncomm3=Your comment has been added. According to this community or entry's settings, it was marked as screened, and will be visible only to you and any other community admins until one of you chooses to unscreen it. <a [[aopts]]>View your comment</a>.
+	.success.screened.comm.anon.diffparent=Your anonymous comment has been added and marked as screened. It will be visible only to the author of the parent comment and to the community administrators until the community administrators choose to unscreen it. <a [[aopts]]>View your comment</a>.
 
-.success.screened.comm2=Your comment has been added and marked as screened; it will be visible only to you and the community administrators until they choose to unscreen it. <a [[aopts]]>View your comment</a>.
+.success.screened.comm.owncomm4=Your comment has been added. According to this community or entry's settings, it was marked as screened, and will be visible only to you and any other community admins until one of you chooses to unscreen it. <a [[aopts]]>View your comment</a>.
 
-.success.screened.user.anon2=Your anonymous comment has been added. According to this account's settings, it was marked as screened and will be visible only to the account owner until the owner chooses to unscreen it. <a [[aopts]]>Go back to the comment thread</a>.
+.success.screened.comm.owncomm.diffparent=Your comment has been added. According to this community or entry's settings, it was marked as screened, and will be visible only to you, the author of the parent comment, and any other community admins until one of you chooses to unscreen it. <a [[aopts]]>View your comment</a>.
 
-.success.screened.user.ownjournal2=Your comment has been added. According to this journal's settings, it was marked as screened, and will be visible only to you until you choose to unscreen it. <a [[aopts]]>View your comment</a>.
+.success.screened.comm3=Your comment has been added and marked as screened. It will be visible only to you and the community administrators until they choose to unscreen it. <a [[aopts]]>View your comment</a>.
 
-.success.screened.user2=Your comment has been added. According to this account's settings, it was marked as screened and will be visible only to you and the journal's owner until the owner chooses to unscreen it. <a [[aopts]]>View your comment</a>.
+.success.screened.comm.diffparent=Your comment has been added and marked as screened. It will be visible only to you, the author of the parent comment, and the community administrators until the community administrators choose to unscreen it. <a [[aopts]]>View your comment</a>.
 
-.success.screened.user.ownjournal.otherparent=Your comment has been added. According to this journal's settings, it was marked as screened and will be visible only to you and the author of the comment you replied to until you choose to unscreen it. <a [[aopts]]>View your comment.</a>
+.success.screened.user.anon3=Your anonymous comment has been added. According to this account's settings, it was marked as screened and will be visible only to the account owner until the owner chooses to unscreen it. <a [[aopts]]>Go back to the comment thread</a>.
+
+.success.screened.user.anon.diffparent=Your anonymous comment has been added. According to this account's settings, it was marked as screened and will be visible only to the author of the parent comment and to the account owner until the owner chooses to unscreen it. <a [[aopts]]>Go back to the comment thread</a>.
+
+.success.screened.user.ownjournal3=Your comment has been added. According to this journal's settings, it was marked as screened, and will be visible only to you until you choose to unscreen it. <a [[aopts]]>View your comment</a>.
+
+.success.screened.user.ownjournal.diffparent=Your comment has been added. According to this journal's settings, it was marked as screened and will be visible only to you and the author of the parent comment until you choose to unscreen it. <a [[aopts]]>View your comment.</a>
+
+.success.screened.user3=Your comment has been added. According to this account's settings, it was marked as screened and will be visible only to you and the journal's owner until the owner chooses to unscreen it. <a [[aopts]]>View your comment</a>.
+
+.success.screened.user.diffparent=Your comment has been added. According to this journal's settings, it was marked as screened and will be visible only to you, the author of the parent comment, and the journal's owner until the owner chooses to unscreen it. <a [[aopts]]>View your comment</a>.
 
 .success.title=Success
 
