@@ -240,7 +240,7 @@ body<=
         my $parentu = $init ? $init->{parent}->{u} : undef;
         if ( $journalu && $journalu->is_community ) {
             # if there's a separate parent commenter
-            if ( $parentu && !($parentu->equals ( $journalu )) {
+            if ( $parentu && !($parentu->equals ( $journalu ) ) ) {
                 if ( $POST{'usertype'} eq 'anonymous' ) { 
                     $mlcode = '.success.screened.comm.anon.diffparent';
                 } elsif ( $commentu && $commentu->can_manage( $journalu ) ) {
@@ -251,11 +251,11 @@ body<=
             }
             else {
                 if ( $POST{'usertype'} eq 'anonymous' ) {
-                    $mlcode = '.success.screened.comm.anon3';
+                    $mlcode = '.success.screened.comm.anon4';
                 } elsif ( $commentu && $commentu->can_manage( $journalu ) ) {
-                    $mlcode = '.success.screened.comm.owncomm4';
+                    $mlcode = '.success.screened.comm.owncomm5';
                 } else {
-                    $mlcode = '.success.screened.comm3';
+                    $mlcode = '.success.screened.comm4';
                 }
             }
         } else {  # not a community
@@ -270,16 +270,17 @@ body<=
                 }
             } else {
                 if ( $POST{'usertype'} eq 'anonymous' ) {
-                       $mlcode = '.success.screened.user.anon3';
+                       $mlcode = '.success.screened.user.anon4';
                 } elsif ( $commentu && $commentu->equals( $journalu ) ) {
-                    $mlcode = '.success.screened.user.ownjournal2';
+                    $mlcode = '.success.screened.user.ownjournal4';
                 } else {
-                    $mlcode = '.success.screened.user3';
+                    $mlcode = '.success.screened.user4';
                 }
             }
         }
     }
 
+    $ret .= "<?p " . BML::ml($mlcode, {'aopts' => "href='$commentlink'"}) . " p?>";
 
     # did this comment unscreen its parent?
     if ($wasscreened and $parent->{state} ne 'S') {
